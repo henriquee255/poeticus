@@ -17,12 +17,24 @@ export default function LoginPage() {
         e.preventDefault()
         setLoading(true)
         setError("")
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) {
             setError("Email ou senha incorretos.")
-        } else {
-            router.push("/")
-            router.refresh()
+        } else if (data.user) {
+            // Verifica se o usuário foi bloqueado pelo admin
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_blocked')
+                .eq('id', data.user.id)
+                .single()
+
+            if (!profile || profile.is_blocked) {
+                await supabase.auth.signOut()
+                setError("Usuário não cadastrado ou sem acesso.")
+            } else {
+                router.push("/")
+                router.refresh()
+            }
         }
         setLoading(false)
     }
