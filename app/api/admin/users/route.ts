@@ -12,7 +12,7 @@ export async function GET() {
     try {
         // Lista usuários via tabela profiles (funciona com qualquer chave)
         const res = await fetch(
-            `${SUPA_URL}/rest/v1/profiles?select=id,username,email,avatar_url,created_at&is_blocked=is.false&order=created_at.desc`,
+            `${SUPA_URL}/rest/v1/profiles?select=id,username,email,avatar_url,created_at,is_blocked&order=created_at.desc`,
             { headers: h }
         )
         const profiles = await res.json()
@@ -69,14 +69,19 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { user_id, username } = await request.json()
+        const { user_id, username, email, is_blocked } = await request.json()
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
-        if (username) {
+        const profileUpdate: any = {}
+        if (username !== undefined) profileUpdate.username = username
+        if (email !== undefined) profileUpdate.email = email
+        if (is_blocked !== undefined) profileUpdate.is_blocked = is_blocked
+
+        if (Object.keys(profileUpdate).length > 0) {
             await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
                 method: 'PATCH',
                 headers: { ...h, 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ username })
+                body: JSON.stringify(profileUpdate)
             })
         }
 

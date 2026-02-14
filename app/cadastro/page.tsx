@@ -43,20 +43,16 @@ export default function CadastroPage() {
                 .single()
 
             if (existingProfile?.is_blocked) {
-                // Tenta logar para confirmar a senha
-                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-                if (loginError) {
-                    await supabase.auth.signOut()
-                    setError("Este email já está cadastrado com outra senha.")
-                    setLoading(false)
-                    return
-                }
-                // Desbloqueia e atualiza perfil
-                await fetch('/api/profile', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0], email, is_blocked: false })
-                })
+                await supabase.auth.signOut()
+                setError("Este email está desativado. Entre em contato com o administrador.")
+                setLoading(false)
+                return
+            } else if (existingProfile) {
+                // Usuário já existe e está ativo
+                await supabase.auth.signOut()
+                setError("Este email já está cadastrado. Faça login.")
+                setLoading(false)
+                return
             } else {
                 await fetch('/api/profile', {
                     method: 'PATCH',
