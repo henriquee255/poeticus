@@ -14,10 +14,12 @@ export async function PATCH(request: Request) {
         if (avatar_url !== undefined) body.avatar_url = avatar_url
         if (email !== undefined) body.email = email
 
-        const res = await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
-            method: 'PATCH',
-            headers: { ...h, 'Prefer': 'return=representation' },
-            body: JSON.stringify(body)
+        // Upsert: cria se não existir, atualiza se existir
+        const upsertBody = { id: user_id, ...body }
+        const res = await fetch(`${SUPA_URL}/rest/v1/profiles`, {
+            method: 'POST',
+            headers: { ...h, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+            body: JSON.stringify(upsertBody)
         })
         const data = await res.json()
         return NextResponse.json(data[0] || {})

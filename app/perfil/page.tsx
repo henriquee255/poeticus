@@ -163,14 +163,14 @@ export default function PerfilPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-8 w-fit">
-                    {([['salvos', 'Salvos', Bookmark], ['curtidos', 'Curtidos', Heart], ['configuracoes', 'Configurações', User]] as any[]).map(([key, label, Icon]) => (
+                <div className="flex gap-1 bg-white/5 rounded-xl p-1 mb-8 w-full overflow-x-auto">
+                    {([['salvos', 'Salvos', Bookmark], ['curtidos', 'Curtidos', Heart], ['configuracoes', 'Config', User]] as any[]).map(([key, label, Icon]) => (
                         <button
                             key={key}
                             onClick={() => setTab(key)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === key ? 'bg-purple-900/40 text-purple-300' : 'text-gray-400 hover:text-white'}`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-1 justify-center ${tab === key ? 'bg-purple-900/40 text-purple-300' : 'text-gray-400 hover:text-white'}`}
                         >
-                            <Icon className="w-4 h-4" /> {label}
+                            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {label}
                         </button>
                     ))}
                 </div>
