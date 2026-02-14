@@ -21,6 +21,12 @@ export default function PostPage() {
     const [hasLiked, setHasLiked] = useState(false)
     const [isLiking, setIsLiking] = useState(false)
     const [isSharing, setIsSharing] = useState(false)
+    const [toast, setToast] = useState("")
+
+    const showToast = (msg: string) => {
+        setToast(msg)
+        setTimeout(() => setToast(""), 2500)
+    }
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -55,9 +61,8 @@ export default function PostPage() {
             await likePost(post.id)
             setHasLiked(true)
             setPost(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null)
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(`liked_${post.id}`, 'true')
-            }
+            localStorage.setItem(`liked_${post.id}`, 'true')
+            showToast("Curtida registrada ♥")
         } catch (error) {
             console.error("Error liking post:", error)
         } finally {
@@ -72,12 +77,9 @@ export default function PostPage() {
             await navigator.clipboard.writeText(window.location.href)
             await sharePost(post.id)
             setPost(prev => prev ? { ...prev, shares: (prev.shares || 0) + 1 } : null)
-            alert("Link copiado!")
-        } catch {
-            alert("Link copiado!")
-        } finally {
-            setIsSharing(false)
-        }
+        } catch { /* ignore clipboard errors */ }
+        showToast("URL copiada!")
+        setIsSharing(false)
     }
 
     if (isLoading) {
@@ -106,6 +108,13 @@ export default function PostPage() {
             "min-h-screen transition-colors duration-500",
             isReadingMode ? "bg-[#1a1a1a]" : "bg-black"
         )}>
+
+            {/* Toast */}
+            {toast && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm px-5 py-2.5 rounded-full shadow-lg animate-fade-in">
+                    {toast}
+                </div>
+            )}
 
             {/* Reading Controls (Sticky) */}
             <motion.div

@@ -56,7 +56,7 @@ export default function CapituloPage({ params }: { params: Promise<{ slug: strin
                         <div
                             className="prose prose-invert prose-lg max-w-none text-gray-300 leading-relaxed font-serif"
                             style={{ lineHeight: '2' }}
-                            dangerouslySetInnerHTML={{ __html: chapter.content }}
+                            dangerouslySetInnerHTML={{ __html: chapter.content.replace(/\n/g, '<br />') }}
                         />
                     ) : (
                         <p className="text-gray-500 italic">Capítulo sem conteúdo.</p>
