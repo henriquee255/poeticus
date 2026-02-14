@@ -66,6 +66,9 @@ export default function CadastroPage() {
             }
         }
 
+        // Limpa likes do localStorage ao criar nova conta
+        Object.keys(localStorage).filter(k => k.startsWith('liked_')).forEach(k => localStorage.removeItem(k))
+
         router.push("/")
         router.refresh()
         setLoading(false)
