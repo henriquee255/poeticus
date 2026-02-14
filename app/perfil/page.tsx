@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { supabase } from "@/lib/supabase"
 import { motion } from "framer-motion"
-import { User, Bookmark, Heart, FolderOpen, Plus, Trash2, LogOut, Camera, Save } from "lucide-react"
+import { User, Bookmark, Heart, FolderOpen, Plus, Trash2, LogOut, Camera, Save, Eye, EyeOff } from "lucide-react"
 import { getPosts } from "@/lib/storage"
 import { Post } from "@/types"
 import Link from "next/link"
@@ -23,6 +23,10 @@ export default function PerfilPage() {
     const [avatarPreview, setAvatarPreview] = useState("")
     const [saving, setSaving] = useState(false)
     const [toast, setToast] = useState("")
+    const [newEmail, setNewEmail] = useState("")
+    const [newPassword, setNewPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+    const [showPass, setShowPass] = useState(false)
 
     const [collections, setCollections] = useState<Collection[]>([])
     const [savedPosts, setSavedPosts] = useState<SavedPost[]>([])
@@ -256,9 +260,10 @@ export default function PerfilPage() {
 
                 {/* Tab: Configurações */}
                 {tab === 'configuracoes' && (
-                    <div className="max-w-md space-y-6">
+                    <div className="max-w-md space-y-4">
+                        {/* Perfil */}
                         <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-                            {/* Avatar */}
+                            <h3 className="text-sm font-medium text-gray-300">Perfil</h3>
                             <div className="flex items-center gap-4">
                                 <div className="w-16 h-16 rounded-full bg-purple-900/50 border-2 border-purple-500/30 overflow-hidden flex items-center justify-center">
                                     {avatarPreview
@@ -281,22 +286,95 @@ export default function PerfilPage() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-2">Email</label>
-                                <input
-                                    value={user.email || ""}
-                                    disabled
-                                    className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 text-gray-500 cursor-not-allowed"
-                                />
-                            </div>
-
                             <button
                                 onClick={handleSaveProfile}
                                 disabled={saving}
                                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
                             >
                                 <Save className="w-4 h-4" />
-                                {saving ? "Salvando..." : "Salvar alterações"}
+                                {saving ? "Salvando..." : "Salvar perfil"}
+                            </button>
+                        </div>
+
+                        {/* Email */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+                            <h3 className="text-sm font-medium text-gray-300">Alterar email</h3>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">Email atual</label>
+                                <input
+                                    value={user.email || ""}
+                                    disabled
+                                    className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 text-gray-500 cursor-not-allowed"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">Novo email</label>
+                                <input
+                                    type="email"
+                                    value={newEmail}
+                                    onChange={e => setNewEmail(e.target.value)}
+                                    placeholder="novo@email.com"
+                                    className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                />
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    if (!newEmail) return
+                                    setSaving(true)
+                                    const { error } = await supabase.auth.updateUser({ email: newEmail })
+                                    if (error) showToast("Erro: " + error.message)
+                                    else { showToast("Email atualizado!"); setNewEmail("") }
+                                    setSaving(false)
+                                }}
+                                disabled={saving || !newEmail}
+                                className="flex items-center gap-2 bg-white/10 hover:bg-white/15 disabled:opacity-40 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <Save className="w-4 h-4" /> Atualizar email
+                            </button>
+                        </div>
+
+                        {/* Senha */}
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+                            <h3 className="text-sm font-medium text-gray-300">Alterar senha</h3>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">Nova senha</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPass ? 'text' : 'password'}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        placeholder="mínimo 6 caracteres"
+                                        className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 pr-10 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                    />
+                                    <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">Confirmar nova senha</label>
+                                <input
+                                    type={showPass ? 'text' : 'password'}
+                                    value={confirmPassword}
+                                    onChange={e => setConfirmPassword(e.target.value)}
+                                    placeholder="repita a senha"
+                                    className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                                />
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    if (newPassword.length < 6) return showToast("Senha deve ter ao menos 6 caracteres")
+                                    if (newPassword !== confirmPassword) return showToast("Senhas não coincidem")
+                                    setSaving(true)
+                                    const { error } = await supabase.auth.updateUser({ password: newPassword })
+                                    if (error) showToast("Erro: " + error.message)
+                                    else { showToast("Senha atualizada!"); setNewPassword(""); setConfirmPassword("") }
+                                    setSaving(false)
+                                }}
+                                disabled={saving || !newPassword || !confirmPassword}
+                                className="flex items-center gap-2 bg-white/10 hover:bg-white/15 disabled:opacity-40 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <Save className="w-4 h-4" /> Atualizar senha
                             </button>
                         </div>
                     </div>
