@@ -20,6 +20,7 @@ export interface Post {
     color?: string;
     status: 'published' | 'draft';
     likes?: number;
+    shares?: number;
 }
 
 export interface Ad {

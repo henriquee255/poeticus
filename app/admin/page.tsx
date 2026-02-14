@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { BarChart3, Users, FileText, Eye } from "lucide-react"
+import { BarChart3, FileText, Heart, Share2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { getPosts } from "@/lib/storage"
@@ -10,34 +10,27 @@ import Link from "next/link"
 
 export default function AdminDashboard() {
     const [posts, setPosts] = useState<Post[]>([])
-    const [stats, setStats] = useState([
-        { label: "Total de Leitores", value: "12.5k", change: "+12%", icon: Users },
-        { label: "Poemas Publicados", value: "0", change: "+0", icon: FileText },
-        { label: "Visualizações Mensais", value: "45.2k", change: "+8%", icon: Eye },
-        { label: "Engajamento", value: "24%", change: "+2%", icon: BarChart3 },
-    ])
+    const [totalLikes, setTotalLikes] = useState(0)
+    const [totalShares, setTotalShares] = useState(0)
 
     useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const allPosts = await getPosts()
-                setPosts(allPosts)
-                const published = allPosts.filter(p => p.status === 'published').length
-
-                setStats(prev => prev.map(stat =>
-                    stat.label === "Poemas Publicados"
-                        ? { ...stat, value: published.toString(), change: `+${published}` }
-                        : stat
-                ))
-            } catch (error) {
-                console.error("Error fetching dashboard data:", error)
-            }
-        }
-
-        fetchDashboardData()
+        getPosts().then(allPosts => {
+            setPosts(allPosts)
+            setTotalLikes(allPosts.reduce((sum, p) => sum + (p.likes || 0), 0))
+            setTotalShares(allPosts.reduce((sum, p) => sum + ((p as any).shares || 0), 0))
+        }).catch(console.error)
     }, [])
 
-    const recentPosts = posts.slice(0, 5)
+    const published = posts.filter(p => p.status === 'published')
+    const topLiked = [...published].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 5)
+    const topShared = [...published].sort((a, b) => ((b as any).shares || 0) - ((a as any).shares || 0)).slice(0, 5)
+
+    const stats = [
+        { label: "Poemas Publicados", value: published.length.toString(), icon: FileText, color: "text-purple-400 bg-purple-500/10" },
+        { label: "Total de Likes", value: totalLikes.toString(), icon: Heart, color: "text-red-400 bg-red-500/10" },
+        { label: "Compartilhamentos", value: totalShares.toString(), icon: Share2, color: "text-blue-400 bg-blue-500/10" },
+        { label: "Total de Poemas", value: posts.length.toString(), icon: BarChart3, color: "text-emerald-400 bg-emerald-500/10" },
+    ]
 
     return (
         <div className="p-8">
@@ -59,12 +52,9 @@ export default function AdminDashboard() {
                             className="bg-white/5 border border-white/10 p-6 rounded-xl hover:bg-white/[0.07] transition-colors"
                         >
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400">
+                                <div className={cn("p-2 rounded-lg", stat.color)}>
                                     <Icon className="w-5 h-5" />
                                 </div>
-                                <span className="text-emerald-400 text-xs font-medium bg-emerald-500/10 px-2 py-1 rounded-full">
-                                    {stat.change}
-                                </span>
                             </div>
                             <h3 className="text-2xl font-bold text-white mb-1">{stat.value}</h3>
                             <p className="text-gray-500 text-sm">{stat.label}</p>
@@ -73,36 +63,53 @@ export default function AdminDashboard() {
                 })}
             </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Atividade Recente (Poemas)</h2>
-                <div className="space-y-4">
-                    {recentPosts.length > 0 ? (
-                        recentPosts.map((post) => (
-                            <div key={post.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        "w-2 h-2 rounded-full",
-                                        post.status === 'published' ? "bg-emerald-500" : "bg-purple-500"
-                                    )} />
-                                    <div>
-                                        <p className="text-sm text-white font-medium">
-                                            {post.status === 'published' ? 'Poema publicado:' : 'Novo rascunho:'} "{post.title}"
-                                        </p>
-                                        <p className="text-xs text-gray-500">{post.date} • {post.category}</p>
-                                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Top Likes */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Heart className="w-4 h-4 text-red-400" />
+                        <h2 className="text-lg font-bold text-white">Mais Curtidos</h2>
+                    </div>
+                    <div className="space-y-3">
+                        {topLiked.length === 0 && <p className="text-gray-500 text-sm">Nenhum like ainda.</p>}
+                        {topLiked.map((post, i) => (
+                            <div key={post.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-600 w-4">{i + 1}</span>
+                                    <Link href={`/admin/edit/${post.id}`} className="text-sm text-white hover:text-purple-300 transition-colors truncate max-w-[180px]">
+                                        {post.title}
+                                    </Link>
                                 </div>
-                                <Link
-                                    href={`/admin/edit/${post.id}`}
-                                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                                >
-                                    Ver detalhes
-                                </Link>
+                                <span className="text-sm font-medium text-red-400 flex items-center gap-1">
+                                    <Heart className="w-3 h-3" /> {post.likes || 0}
+                                </span>
                             </div>
-                        ))
-                    ) : (
-                        <p className="text-gray-500 text-sm py-4">Nenhuma atividade recente encontrada.</p>
-                    )}
+                        ))}
+                    </div>
+                </div>
+
+                {/* Top Shares */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Share2 className="w-4 h-4 text-blue-400" />
+                        <h2 className="text-lg font-bold text-white">Mais Compartilhados</h2>
+                    </div>
+                    <div className="space-y-3">
+                        {topShared.length === 0 && <p className="text-gray-500 text-sm">Nenhum compartilhamento ainda.</p>}
+                        {topShared.map((post, i) => (
+                            <div key={post.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-600 w-4">{i + 1}</span>
+                                    <Link href={`/admin/edit/${post.id}`} className="text-sm text-white hover:text-purple-300 transition-colors truncate max-w-[180px]">
+                                        {post.title}
+                                    </Link>
+                                </div>
+                                <span className="text-sm font-medium text-blue-400 flex items-center gap-1">
+                                    <Share2 className="w-3 h-3" /> {(post as any).shares || 0}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

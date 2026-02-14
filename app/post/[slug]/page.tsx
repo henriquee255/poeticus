@@ -2,9 +2,9 @@
 
 import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart } from "lucide-react"
+import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2 } from "lucide-react"
 import Link from "next/link"
-import { getPosts, likePost } from "@/lib/storage"
+import { getPosts, likePost, sharePost } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -14,12 +14,13 @@ export default function PostPage() {
     const params = useParams()
     const slug = params.slug as string
 
-    const [post, setPost] = useState<Post & { likes?: number } | null>(null)
+    const [post, setPost] = useState<Post & { likes?: number; shares?: number } | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [fontSize, setFontSize] = useState(18)
     const [isReadingMode, setIsReadingMode] = useState(false)
     const [hasLiked, setHasLiked] = useState(false)
     const [isLiking, setIsLiking] = useState(false)
+    const [isSharing, setIsSharing] = useState(false)
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -58,6 +59,21 @@ export default function PostPage() {
             console.error("Error liking post:", error)
         } finally {
             setIsLiking(false)
+        }
+    }
+
+    const handleShare = async () => {
+        if (!post || isSharing) return
+        setIsSharing(true)
+        try {
+            await navigator.clipboard.writeText(window.location.href)
+            await sharePost(post.id)
+            setPost(prev => prev ? { ...prev, shares: (prev.shares || 0) + 1 } : null)
+            alert("Link copiado!")
+        } catch {
+            alert("Link copiado!")
+        } finally {
+            setIsSharing(false)
         }
     }
 
@@ -217,13 +233,12 @@ export default function PostPage() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-gray-400 hover:text-white"
-                            onClick={() => {
-                                navigator.clipboard.writeText(window.location.href)
-                                alert("Link copiado!")
-                            }}
+                            className="text-gray-400 hover:text-white flex items-center gap-2"
+                            onClick={handleShare}
+                            disabled={isSharing}
                         >
-                            Copiar Link
+                            <Share2 className="w-4 h-4" />
+                            Compartilhar ({post.shares || 0})
                         </Button>
                     </div>
                 </div>

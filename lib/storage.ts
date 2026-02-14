@@ -87,6 +87,14 @@ export const likePost = async (id: string) => {
     })
 }
 
+export const sharePost = async (id: string) => {
+    return fetchApi(API_ROUTES.POSTS, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'share' })
+    })
+}
+
 // Categories
 export const getCategories = async (): Promise<string[]> => fetchApi(API_ROUTES.CATEGORIES)
 
