@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET() {
     try {
@@ -30,32 +29,49 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
+
 export async function PATCH(request: Request) {
     try {
-        const { id, action } = await request.json()
+        const body = await request.json()
+        const { id, action } = body
+
+        if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
         if (action === 'like' || action === 'share') {
             const field = action === 'like' ? 'likes' : 'shares'
 
-            const { data: currentPost } = await supabaseServer
+            // Fetch current value
+            const { data: current, error: fetchError } = await supabase
                 .from('posts')
                 .select(field)
                 .eq('id', id)
                 .single()
 
-            const { data: updated, error: updateError } = await supabaseServer
+            if (fetchError) {
+                console.error('Fetch error:', fetchError)
+                return NextResponse.json({ error: fetchError.message }, { status: 500 })
+            }
+
+            const newValue = ((current as any)?.[field] || 0) + 1
+
+            const { data: updated, error: updateError } = await supabase
                 .from('posts')
-                .update({ [field]: ((currentPost as any)?.[field] || 0) + 1 })
+                .update({ [field]: newValue })
                 .eq('id', id)
                 .select()
                 .single()
 
-            if (updateError) throw updateError
+            if (updateError) {
+                console.error('Update error:', updateError)
+                return NextResponse.json({ error: updateError.message }, { status: 500 })
+            }
+
             return NextResponse.json(updated)
         }
 
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     } catch (error: any) {
+        console.error('PATCH error:', error)
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
