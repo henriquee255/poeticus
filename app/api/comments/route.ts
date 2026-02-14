@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { filterProfanity } from '@/lib/profanity'
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     if (!post_id) return NextResponse.json([])
 
     const res = await fetch(
-        `${URL}/rest/v1/comments?post_id=eq.${post_id}&order=created_at.asc&select=*,profiles(username,avatar_url)`,
+        `${SUPA_URL}/rest/v1/comments?post_id=eq.${post_id}&order=created_at.asc&select=*,profiles(username,avatar_url)`,
         { headers: h }
     )
     const data = await res.json()
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
         const filtered = filterProfanity(content.trim())
 
-        const res = await fetch(`${URL}/rest/v1/comments`, {
+        const res = await fetch(`${SUPA_URL}/rest/v1/comments`, {
             method: 'POST',
             headers: { ...h, 'Prefer': 'return=representation' },
             body: JSON.stringify({ post_id, user_id, content: filtered })
@@ -45,7 +45,7 @@ export async function DELETE(request: Request) {
     const user_id = searchParams.get('user_id')
     if (!id || !user_id) return NextResponse.json({ error: 'Missing params' }, { status: 400 })
 
-    await fetch(`${URL}/rest/v1/comments?id=eq.${id}&user_id=eq.${user_id}`, {
+    await fetch(`${SUPA_URL}/rest/v1/comments?id=eq.${id}&user_id=eq.${user_id}`, {
         method: 'DELETE', headers: h
     })
     return NextResponse.json({ ok: true })

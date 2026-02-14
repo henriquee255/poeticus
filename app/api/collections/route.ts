@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
@@ -9,14 +9,14 @@ export async function GET(request: Request) {
     const user_id = searchParams.get('user_id')
     if (!user_id) return NextResponse.json([])
 
-    const res = await fetch(`${URL}/rest/v1/collections?user_id=eq.${user_id}&order=created_at.asc`, { headers: h })
+    const res = await fetch(`${SUPA_URL}/rest/v1/collections?user_id=eq.${user_id}&order=created_at.asc`, { headers: h })
     const data = await res.json()
     return NextResponse.json(Array.isArray(data) ? data : [])
 }
 
 export async function POST(request: Request) {
     const { user_id, name } = await request.json()
-    const res = await fetch(`${URL}/rest/v1/collections`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/collections`, {
         method: 'POST',
         headers: { ...h, 'Prefer': 'return=representation' },
         body: JSON.stringify({ user_id, name })
@@ -31,7 +31,7 @@ export async function DELETE(request: Request) {
     const user_id = searchParams.get('user_id')
     if (!id || !user_id) return NextResponse.json({ error: 'Missing' }, { status: 400 })
 
-    await fetch(`${URL}/rest/v1/collections?id=eq.${id}&user_id=eq.${user_id}`, {
+    await fetch(`${SUPA_URL}/rest/v1/collections?id=eq.${id}&user_id=eq.${user_id}`, {
         method: 'DELETE', headers: h
     })
     return NextResponse.json({ ok: true })

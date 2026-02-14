@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const headers = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
         // Create profile
         if (data.user) {
-            await fetch(`${URL}/rest/v1/profiles`, {
+            await fetch(`${SUPA_URL}/rest/v1/profiles`, {
                 method: 'POST',
                 headers: { ...headers, 'Prefer': 'return=minimal' },
                 body: JSON.stringify({ id: data.user.id, username: username || email.split('@')[0] })

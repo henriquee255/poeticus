@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
@@ -13,7 +13,7 @@ export async function PATCH(request: Request) {
         if (username !== undefined) body.username = username
         if (avatar_url !== undefined) body.avatar_url = avatar_url
 
-        const res = await fetch(`${URL}/rest/v1/profiles?id=eq.${user_id}`, {
+        const res = await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
             method: 'PATCH',
             headers: { ...h, 'Prefer': 'return=representation' },
             body: JSON.stringify(body)
