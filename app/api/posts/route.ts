@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET() {
     try {
@@ -36,13 +37,13 @@ export async function PATCH(request: Request) {
         if (action === 'like' || action === 'share') {
             const field = action === 'like' ? 'likes' : 'shares'
 
-            const { data: currentPost } = await supabase
+            const { data: currentPost } = await supabaseServer
                 .from('posts')
                 .select(field)
                 .eq('id', id)
                 .single()
 
-            const { data: updated, error: updateError } = await supabase
+            const { data: updated, error: updateError } = await supabaseServer
                 .from('posts')
                 .update({ [field]: ((currentPost as any)?.[field] || 0) + 1 })
                 .eq('id', id)

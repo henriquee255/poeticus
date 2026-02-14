@@ -28,8 +28,8 @@ export function FeaturedPosts() {
     return (
         <section className="py-24 bg-black relative">
             <div className="container mx-auto px-4 relative z-10">
-                <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
-                    <div>
+                <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-4">
+                    <div className="text-center md:text-left">
                         <span className="text-purple-400 font-medium tracking-wider text-sm uppercase mb-2 block">Destaques da Semana</span>
                         <h2 className="text-3xl md:text-5xl font-bold text-white font-serif">Leituras Essenciais</h2>
                     </div>
