@@ -26,18 +26,44 @@ export default function CadastroPage() {
         }
 
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+
         if (signUpError) {
-            setError(signUpError.message === 'User already registered' ? 'Este email já está cadastrado.' : signUpError.message)
+            setError(signUpError.message)
             setLoading(false)
             return
         }
 
+        // Supabase retorna o user existente sem erro quando email confirmation está off
+        // Precisamos checar se é um usuário bloqueado tentando se recadastrar
         if (data.user) {
-            await fetch('/api/profile', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0], email })
-            })
+            const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('is_blocked')
+                .eq('id', data.user.id)
+                .single()
+
+            if (existingProfile?.is_blocked) {
+                // Tenta logar para confirmar a senha
+                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+                if (loginError) {
+                    await supabase.auth.signOut()
+                    setError("Este email já está cadastrado com outra senha.")
+                    setLoading(false)
+                    return
+                }
+                // Desbloqueia e atualiza perfil
+                await fetch('/api/profile', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0], email, is_blocked: false })
+                })
+            } else {
+                await fetch('/api/profile', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0], email })
+                })
+            }
         }
 
         router.push("/")
