@@ -12,7 +12,7 @@ export async function GET() {
     try {
         // Lista usuários via tabela profiles (funciona com qualquer chave)
         const res = await fetch(
-            `${SUPA_URL}/rest/v1/profiles?select=id,username,avatar_url,created_at&order=created_at.desc`,
+            `${SUPA_URL}/rest/v1/profiles?select=id,username,email,avatar_url,created_at&is_blocked=is.false&order=created_at.desc`,
             { headers: h }
         )
         const profiles = await res.json()
@@ -92,8 +92,13 @@ export async function DELETE(request: Request) {
         const user_id = searchParams.get('user_id')
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
-        // Deleta o perfil
-        await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, { method: 'DELETE', headers: h })
+        // Bloqueia o usuário (marca is_blocked=true) em vez de deletar
+        // Isso força logout automático quando ele tentar acessar
+        await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
+            method: 'PATCH',
+            headers: { ...h, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ is_blocked: true })
+        })
         return NextResponse.json({ ok: true })
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })

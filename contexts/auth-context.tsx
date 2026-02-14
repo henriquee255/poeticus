@@ -32,6 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchProfile = async (userId: string) => {
         const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+        if (data?.is_blocked) {
+            await supabase.auth.signOut()
+            setProfile(null)
+            return
+        }
         setProfile(data || null)
     }
 
