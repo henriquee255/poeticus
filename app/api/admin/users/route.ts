@@ -2,40 +2,29 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
-const supabaseAdmin = createClient(SUPA_URL, SERVICE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false }
-})
-
-const h = { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' }
+// Cliente para operações de auth (signUp)
+const supabase = createClient(SUPA_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
 export async function GET() {
     try {
-        // Tenta via SDK admin
-        let userList: any[] = []
-        try {
-            const { data, error } = await supabaseAdmin.auth.admin.listUsers()
-            if (!error) userList = data.users
-        } catch {
-            // fallback: busca via REST
-            const res = await fetch(`${SUPA_URL}/auth/v1/admin/users?per_page=1000`, { headers: h })
-            const d = await res.json()
-            userList = d.users || []
-        }
+        // Lista usuários via tabela profiles (funciona com qualquer chave)
+        const res = await fetch(
+            `${SUPA_URL}/rest/v1/profiles?select=id,username,avatar_url,created_at&order=created_at.desc`,
+            { headers: h }
+        )
+        const profiles = await res.json()
+        if (!Array.isArray(profiles)) throw new Error(JSON.stringify(profiles))
 
-        const profilesRes = await fetch(`${SUPA_URL}/rest/v1/profiles?select=*`, { headers: h })
-        const profiles = await profilesRes.json()
-        const profileMap: Record<string, any> = {}
-        for (const p of (Array.isArray(profiles) ? profiles : [])) profileMap[p.id] = p
-
-        const users = userList.map((u: any) => ({
-            id: u.id,
-            email: u.email,
-            created_at: u.created_at,
-            last_sign_in_at: u.last_sign_in_at,
-            username: profileMap[u.id]?.username || '',
-            avatar_url: profileMap[u.id]?.avatar_url || '',
+        const users = profiles.map((p: any) => ({
+            id: p.id,
+            email: p.email || '',
+            username: p.username || '',
+            avatar_url: p.avatar_url || '',
+            created_at: p.created_at,
+            last_sign_in_at: null,
         }))
 
         return NextResponse.json(users)
@@ -49,15 +38,15 @@ export async function POST(request: Request) {
         const { action, email, password, username } = await request.json()
 
         if (action === 'create') {
-            const { data, error } = await supabaseAdmin.auth.admin.createUser({
-                email, password, email_confirm: true
-            })
+            // Cria usuário via signUp normal
+            const { data, error } = await supabase.auth.signUp({ email, password })
             if (error) throw error
 
             if (data.user) {
+                // Upsert profile
                 await fetch(`${SUPA_URL}/rest/v1/profiles`, {
                     method: 'POST',
-                    headers: { ...h, 'Prefer': 'return=minimal' },
+                    headers: { ...h, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
                     body: JSON.stringify({ id: data.user.id, username: username || email.split('@')[0] })
                 })
             }
@@ -65,7 +54,9 @@ export async function POST(request: Request) {
         }
 
         if (action === 'invite') {
-            const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email)
+            // Cria conta sem senha (usuário define depois)
+            const tempPass = Math.random().toString(36).slice(-10) + 'A1!'
+            const { data, error } = await supabase.auth.signUp({ email, password: tempPass })
             if (error) throw error
             return NextResponse.json({ ok: true, user: data.user })
         }
@@ -78,17 +69,8 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { user_id, email, password, username } = await request.json()
+        const { user_id, username } = await request.json()
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
-
-        const updates: any = {}
-        if (email) updates.email = email
-        if (password) updates.password = password
-
-        if (Object.keys(updates).length > 0) {
-            const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, updates)
-            if (error) throw error
-        }
 
         if (username) {
             await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
@@ -110,9 +92,7 @@ export async function DELETE(request: Request) {
         const user_id = searchParams.get('user_id')
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id)
-        if (error) throw error
-
+        // Remove apenas o perfil (sem admin key não dá para remover auth.users)
         await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, { method: 'DELETE', headers: h })
         return NextResponse.json({ ok: true })
     } catch (e: any) {

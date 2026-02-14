@@ -36,7 +36,7 @@ export default function CadastroPage() {
             await fetch('/api/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0] })
+                body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0], email })
             })
         }
 

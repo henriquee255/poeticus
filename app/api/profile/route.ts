@@ -6,12 +6,13 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 
 export async function PATCH(request: Request) {
     try {
-        const { user_id, username, avatar_url } = await request.json()
+        const { user_id, username, avatar_url, email } = await request.json()
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
         const body: any = {}
         if (username !== undefined) body.username = username
         if (avatar_url !== undefined) body.avatar_url = avatar_url
+        if (email !== undefined) body.email = email
 
         const res = await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
             method: 'PATCH',
