@@ -193,3 +193,17 @@ export const updateChapter = async (bookId: string, capId: string, data: Partial
 
 export const deleteChapter = async (bookId: string, capId: string) =>
     fetchApi(`${API_ROUTES.LIVROS}/${bookId}/capitulos/${capId}`, { method: 'DELETE' })
+
+// Page Views
+export const trackView = async (slug: string, type: 'post' | 'livro') => {
+    try {
+        await fetch('/api/views', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, type })
+        })
+    } catch { /* silently fail */ }
+}
+
+export const getViewStats = async () =>
+    fetchApi('/api/views')

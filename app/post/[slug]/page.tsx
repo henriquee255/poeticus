@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2 } from "lucide-react"
 import Link from "next/link"
-import { getPosts, likePost, sharePost } from "@/lib/storage"
+import { getPosts, likePost, sharePost, trackView } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -28,6 +28,9 @@ export default function PostPage() {
                 const allPosts = await getPosts()
                 const found = allPosts.find(p => p.slug === slug)
                 setPost(found || null)
+
+                // Track page view
+                if (found) trackView(found.slug, 'post')
 
                 // Simple local state check for likes
                 if (typeof window !== 'undefined') {

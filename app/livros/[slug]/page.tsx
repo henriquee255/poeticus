@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { ArrowLeft, BookOpen, ChevronRight } from "lucide-react"
 import { Book, Chapter } from "@/types"
-import { getBooks, getChapters } from "@/lib/storage"
+import { getBooks, getChapters, trackView } from "@/lib/storage"
 
 export default function LivroPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = use(params)
@@ -18,6 +18,7 @@ export default function LivroPage({ params }: { params: Promise<{ slug: string }
             const found = books.find(b => b.slug === slug && b.status === 'published')
             if (!found) return
             setBook(found)
+            trackView(found.slug, 'livro')
             const caps = await getChapters(found.id)
             setChapters(caps)
         }).catch(() => {}).finally(() => setIsLoading(false))
