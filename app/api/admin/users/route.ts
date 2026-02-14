@@ -1,28 +1,27 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-)
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const KEY = SERVICE_KEY || ANON_KEY
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
+
+const AUTH_URL = `${SUPA_URL}/auth/v1/admin`
 
 export async function GET() {
     try {
-        const { data, error } = await supabaseAdmin.auth.admin.listUsers()
-        if (error) throw error
+        const usersRes = await fetch(`${AUTH_URL}/users?per_page=1000`, { headers: h })
+        const usersData = await usersRes.json()
+        if (!usersRes.ok) throw new Error(usersData.message || 'Failed to list users')
 
-        // Get profiles
+        const userList = usersData.users || []
+
         const profilesRes = await fetch(`${SUPA_URL}/rest/v1/profiles?select=*`, { headers: h })
         const profiles = await profilesRes.json()
         const profileMap: Record<string, any> = {}
         for (const p of (Array.isArray(profiles) ? profiles : [])) profileMap[p.id] = p
 
-        const users = data.users.map(u => ({
+        const users = userList.map((u: any) => ({
             id: u.id,
             email: u.email,
             created_at: u.created_at,
@@ -42,30 +41,33 @@ export async function POST(request: Request) {
         const { action, email, password, username } = await request.json()
 
         if (action === 'create') {
-            // Create user
-            const { data, error } = await supabaseAdmin.auth.admin.createUser({
-                email,
-                password,
-                email_confirm: true,
+            const res = await fetch(`${AUTH_URL}/users`, {
+                method: 'POST',
+                headers: h,
+                body: JSON.stringify({ email, password, email_confirm: true })
             })
-            if (error) throw error
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.message || 'Failed to create user')
 
-            // Create profile
-            if (data.user) {
+            if (data.id) {
                 await fetch(`${SUPA_URL}/rest/v1/profiles`, {
                     method: 'POST',
                     headers: { ...h, 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ id: data.user.id, username: username || email.split('@')[0] })
+                    body: JSON.stringify({ id: data.id, username: username || email.split('@')[0] })
                 })
             }
-            return NextResponse.json({ user: data.user })
+            return NextResponse.json({ user: data })
         }
 
         if (action === 'invite') {
-            // Send invite email via Supabase
-            const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email)
-            if (error) throw error
-            return NextResponse.json({ ok: true, user: data.user })
+            const res = await fetch(`${AUTH_URL}/users`, {
+                method: 'POST',
+                headers: h,
+                body: JSON.stringify({ email, email_confirm: false })
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.message || 'Failed to invite user')
+            return NextResponse.json({ ok: true, user: data })
         }
 
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
@@ -84,8 +86,13 @@ export async function PATCH(request: Request) {
         if (password) updates.password = password
 
         if (Object.keys(updates).length > 0) {
-            const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, updates)
-            if (error) throw error
+            const res = await fetch(`${AUTH_URL}/users/${user_id}`, {
+                method: 'PUT',
+                headers: h,
+                body: JSON.stringify(updates)
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.message || 'Failed to update user')
         }
 
         if (username) {
@@ -108,8 +115,11 @@ export async function DELETE(request: Request) {
         const user_id = searchParams.get('user_id')
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id)
-        if (error) throw error
+        const res = await fetch(`${AUTH_URL}/users/${user_id}`, { method: 'DELETE', headers: h })
+        if (!res.ok) {
+            const data = await res.json()
+            throw new Error(data.message || 'Failed to delete user')
+        }
 
         await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, { method: 'DELETE', headers: h })
         return NextResponse.json({ ok: true })

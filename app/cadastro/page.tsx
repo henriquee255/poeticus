@@ -38,17 +38,6 @@ export default function CadastroPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: data.user.id, username: username || email.split('@')[0] })
             })
-            // Create profile via REST
-            const URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-            const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-            await fetch(`${URL}/rest/v1/profiles`, {
-                method: 'POST',
-                headers: {
-                    'apikey': KEY!, 'Authorization': `Bearer ${KEY}`,
-                    'Content-Type': 'application/json', 'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({ id: data.user.id, username: username || email.split('@')[0] })
-            })
         }
 
         router.push("/")
