@@ -128,7 +128,7 @@ export default function PerfilPage() {
         ? savedPosts.filter(s => s.collection_id === selectedCollection)
         : savedPosts
 
-    if (loading) return <div className="min-h-screen bg-black pt-28 text-center text-gray-500">Carregando...</div>
+    if (loading || (!profile && user)) return <div className="min-h-screen bg-black pt-28 text-center text-gray-500">Carregando...</div>
     if (!user || !profile) return null
 
     return (
