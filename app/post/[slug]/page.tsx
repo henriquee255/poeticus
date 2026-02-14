@@ -2,23 +2,27 @@
 
 import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2 } from "lucide-react"
+import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2, Bookmark } from "lucide-react"
 import Link from "next/link"
 import { getPosts, likePost, unlikePost, sharePost, trackView } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Post } from "@/types"
+import { useAuth } from "@/contexts/auth-context"
+import { CommentSection } from "@/components/ui/comment-section"
 
 export default function PostPage() {
     const params = useParams()
     const slug = params.slug as string
+    const { user } = useAuth()
 
     const [post, setPost] = useState<Post & { likes?: number; shares?: number } | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [fontSize, setFontSize] = useState(18)
     const [isReadingMode, setIsReadingMode] = useState(false)
     const [hasLiked, setHasLiked] = useState(false)
+    const [isSaved, setIsSaved] = useState(false)
     const [isLiking, setIsLiking] = useState(false)
     const [isSharing, setIsSharing] = useState(false)
     const [toast, setToast] = useState("")
@@ -52,6 +56,34 @@ export default function PostPage() {
         fetchPost()
         window.scrollTo(0, 0)
     }, [slug])
+
+    // Check if post is saved
+    useEffect(() => {
+        if (!user || !post) return
+        fetch(`/api/saved?user_id=${user.id}`)
+            .then(r => r.json())
+            .then((saved: any[]) => {
+                setIsSaved(saved.some(s => s.post_id === post.id))
+            })
+    }, [user, post?.id])
+
+    const handleSave = async () => {
+        if (!user) { showToast("Entre para salvar poemas"); return }
+        if (!post) return
+        if (isSaved) {
+            await fetch(`/api/saved?user_id=${user.id}&post_id=${post.id}`, { method: 'DELETE' })
+            setIsSaved(false)
+            showToast("Removido dos salvos")
+        } else {
+            await fetch('/api/saved', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id, post_id: post.id })
+            })
+            setIsSaved(true)
+            showToast("Poema salvo!")
+        }
+    }
 
     const handleLike = async () => {
         if (!post || isLiking) return
@@ -249,7 +281,16 @@ export default function PostPage() {
                             {hasLiked ? "Clique para remover." : "Gostou? Deixe seu toque."}
                         </div>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("flex items-center gap-2 transition-colors", isSaved ? "text-purple-400 hover:text-purple-300" : "text-gray-400 hover:text-white")}
+                            onClick={handleSave}
+                        >
+                            <Bookmark className={cn("w-4 h-4", isSaved && "fill-current")} />
+                            {isSaved ? "Salvo" : "Salvar"}
+                        </Button>
                         <Button
                             variant="ghost"
                             size="sm"
@@ -262,6 +303,9 @@ export default function PostPage() {
                         </Button>
                     </div>
                 </div>
+
+                {/* Comentários */}
+                <CommentSection postId={post.id} />
             </div>
 
         </article>

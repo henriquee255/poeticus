@@ -23,6 +23,7 @@ import { Footer } from "@/components/layout/footer"
 import { NotificationBanner } from "@/components/ui/notification-banner"
 import { AdBanner } from "@/components/ui/ad-banner"
 import { PublicLayoutWrapper } from "@/components/layout/public-layout-wrapper"
+import { AuthProvider } from "@/contexts/auth-context"
 
 export default function RootLayout({
   children,
@@ -36,6 +37,7 @@ export default function RootLayout({
         inter.variable,
         playfair.variable
       )}>
+        <AuthProvider>
         <PublicLayoutWrapper>
           <NotificationBanner />
           <Header />
@@ -51,6 +53,7 @@ export default function RootLayout({
         <PublicLayoutWrapper>
           <Footer />
         </PublicLayoutWrapper>
+        </AuthProvider>
       </body>
     </html>
   );

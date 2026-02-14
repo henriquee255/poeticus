@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { login } from "@/lib/storage"
 
-const ADMIN_EMAIL = "henriquee2501@gmail.com"
+const ADMIN_EMAIL = "eu.henriquee2501@gmail.com"
 const ADMIN_PASSWORD = "poeticus2025"
 
 export default function LoginPage() {
