@@ -6,7 +6,7 @@ import { RichEditor } from "@/components/admin/rich-editor"
 import { ArrowLeft, Save, Upload, Eye } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getCategories, savePost, getPostById } from "@/lib/storage"
+import { getCategories, updatePost, getPostById } from "@/lib/storage"
 import { Post } from "@/types"
 
 export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +72,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
         }
 
         try {
-            await savePost(updatedPost)
+            await updatePost(updatedPost)
             if (newStatus) setStatus(newStatus)
             alert("Alterações salvas!")
             router.push("/admin/posts")

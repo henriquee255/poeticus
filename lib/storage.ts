@@ -56,9 +56,26 @@ export const savePost = async (post: Post) => {
     })
 }
 
+export const updatePost = async (post: Post) => {
+    const dbPost = {
+        ...post,
+        author_name: post.author.name,
+        read_time: post.readTime,
+        cover_image: post.coverImage
+    }
+    delete (dbPost as any).author
+    delete (dbPost as any).readTime
+    delete (dbPost as any).coverImage
+    const { id, ...body } = dbPost as any
+
+    return fetchApi(`${API_ROUTES.POSTS}/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+}
+
 export const deletePost = async (id: string) => {
-    // Note: Need a DELETE route or handle in POST
-    // For now, let's assume we might need a specific delete route
     return fetchApi(`${API_ROUTES.POSTS}/${id}`, { method: 'DELETE' })
 }
 
