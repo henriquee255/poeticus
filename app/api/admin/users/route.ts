@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
     { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
@@ -17,7 +17,7 @@ export async function GET() {
         if (error) throw error
 
         // Get profiles
-        const profilesRes = await fetch(`${URL}/rest/v1/profiles?select=*`, { headers: h })
+        const profilesRes = await fetch(`${SUPA_URL}/rest/v1/profiles?select=*`, { headers: h })
         const profiles = await profilesRes.json()
         const profileMap: Record<string, any> = {}
         for (const p of (Array.isArray(profiles) ? profiles : [])) profileMap[p.id] = p
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
             // Create profile
             if (data.user) {
-                await fetch(`${URL}/rest/v1/profiles`, {
+                await fetch(`${SUPA_URL}/rest/v1/profiles`, {
                     method: 'POST',
                     headers: { ...h, 'Prefer': 'return=minimal' },
                     body: JSON.stringify({ id: data.user.id, username: username || email.split('@')[0] })
@@ -89,7 +89,7 @@ export async function PATCH(request: Request) {
         }
 
         if (username) {
-            await fetch(`${URL}/rest/v1/profiles?id=eq.${user_id}`, {
+            await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, {
                 method: 'PATCH',
                 headers: { ...h, 'Prefer': 'return=minimal' },
                 body: JSON.stringify({ username })
@@ -111,7 +111,7 @@ export async function DELETE(request: Request) {
         const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id)
         if (error) throw error
 
-        await fetch(`${URL}/rest/v1/profiles?id=eq.${user_id}`, { method: 'DELETE', headers: h })
+        await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, { method: 'DELETE', headers: h })
         return NextResponse.json({ ok: true })
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })
