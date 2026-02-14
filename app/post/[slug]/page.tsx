@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2 } from "lucide-react"
 import Link from "next/link"
-import { getPosts, likePost, sharePost, trackView } from "@/lib/storage"
+import { getPosts, likePost, unlikePost, sharePost, trackView } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -54,15 +54,23 @@ export default function PostPage() {
     }, [slug])
 
     const handleLike = async () => {
-        if (!post || hasLiked || isLiking) return
+        if (!post || isLiking) return
 
         setIsLiking(true)
         try {
-            await likePost(post.id)
-            setHasLiked(true)
-            setPost(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null)
-            localStorage.setItem(`liked_${post.id}`, 'true')
-            showToast("Curtida registrada ♥")
+            if (hasLiked) {
+                await unlikePost(post.id)
+                setHasLiked(false)
+                setPost(prev => prev ? { ...prev, likes: Math.max(0, (prev.likes || 0) - 1) } : null)
+                localStorage.removeItem(`liked_${post.id}`)
+                showToast("Curtida removida")
+            } else {
+                await likePost(post.id)
+                setHasLiked(true)
+                setPost(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null)
+                localStorage.setItem(`liked_${post.id}`, 'true')
+                showToast("Curtida registrada ♥")
+            }
         } catch (error) {
             console.error("Error liking post:", error)
         } finally {
@@ -226,11 +234,11 @@ export default function PostPage() {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={handleLike}
-                            disabled={hasLiked || isLiking}
+                            disabled={isLiking}
                             className={cn(
                                 "flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300",
                                 hasLiked
-                                    ? "bg-red-500/10 border-red-500/50 text-red-500"
+                                    ? "bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/5"
                                     : "bg-white/5 border-white/10 text-gray-400 hover:border-red-500/30 hover:text-red-400"
                             )}
                         >
@@ -238,7 +246,7 @@ export default function PostPage() {
                             <span className="text-sm font-medium">{post.likes || 0}</span>
                         </button>
                         <div className="text-sm text-gray-500">
-                            {hasLiked ? "Você tocou este verso." : "Gostou? Deixe seu toque."}
+                            {hasLiked ? "Clique para remover." : "Gostou? Deixe seu toque."}
                         </div>
                     </div>
                     <div className="flex gap-4">

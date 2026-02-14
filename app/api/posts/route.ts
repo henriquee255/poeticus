@@ -38,11 +38,11 @@ export async function PATCH(request: Request) {
         const body = await request.json()
         const { id, action } = body
 
-        if (!id || (action !== 'like' && action !== 'share')) {
+        if (!id || !['like', 'unlike', 'share'].includes(action)) {
             return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
         }
 
-        const field = action === 'like' ? 'likes' : 'shares'
+        const field = action === 'share' ? 'shares' : 'likes'
 
         // 1. Get current value via REST
         const getRes = await fetch(
@@ -57,6 +57,7 @@ export async function PATCH(request: Request) {
 
         const rows = await getRes.json()
         const current = rows?.[0]?.[field] || 0
+        const newValue = action === 'unlike' ? Math.max(0, current - 1) : current + 1
 
         // 2. Update via REST
         const updateRes = await fetch(
@@ -69,7 +70,7 @@ export async function PATCH(request: Request) {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation',
                 },
-                body: JSON.stringify({ [field]: current + 1 })
+                body: JSON.stringify({ [field]: newValue })
             }
         )
 
@@ -79,7 +80,7 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: JSON.stringify(updated) }, { status: 500 })
         }
 
-        return NextResponse.json(updated[0] || { [field]: current + 1 })
+        return NextResponse.json(updated[0] || { [field]: newValue })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }

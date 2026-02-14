@@ -87,6 +87,14 @@ export const likePost = async (id: string) => {
     })
 }
 
+export const unlikePost = async (id: string) => {
+    return fetchApi(API_ROUTES.POSTS, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'unlike' })
+    })
+}
+
 export const sharePost = async (id: string) => {
     return fetchApi(API_ROUTES.POSTS, {
         method: 'PATCH',
