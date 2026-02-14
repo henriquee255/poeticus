@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { getNotifications, saveNotifications } from "@/lib/storage"
 import { Notification } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Save, Bell, Info, AlertTriangle, CheckCircle } from "lucide-react"
+import { Save, Bell, Info, AlertTriangle, CheckCircle, Plus, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function NotificationsPage() {
@@ -12,16 +12,22 @@ export default function NotificationsPage() {
     const [isSaving, setIsSaving] = useState(false)
 
     useEffect(() => {
-        const fetchNotes = async () => {
-            try {
-                const data = await getNotifications()
-                setNotifications(data)
-            } catch (error) {
-                console.error("Error fetching notifications:", error)
-            }
-        }
-        fetchNotes()
+        getNotifications().then(setNotifications).catch(() => {})
     }, [])
+
+    const addNotification = () => {
+        const newNote: Notification = {
+            id: Date.now().toString(),
+            text: 'Nova notificação',
+            type: 'info',
+            active: false,
+        }
+        setNotifications([...notifications, newNote])
+    }
+
+    const removeNotification = (id: string) => {
+        setNotifications(notifications.filter(n => n.id !== id))
+    }
 
     const handleSave = async () => {
         setIsSaving(true)
@@ -55,11 +61,28 @@ export default function NotificationsPage() {
                     <h1 className="text-3xl font-bold text-white font-serif mb-2">Notificações</h1>
                     <p className="text-gray-400">Configure avisos e alertas para os leitores.</p>
                 </div>
-                <Button onClick={handleSave} disabled={isSaving} className="bg-purple-900 hover:bg-purple-800 text-white">
-                    <Save className="w-4 h-4 mr-2" />
-                    {isSaving ? "Salvando..." : "Salvar Alterações"}
-                </Button>
+                <div className="flex gap-3">
+                    <Button onClick={addNotification} variant="outline" className="border-white/10 text-gray-300 hover:text-white">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Nova Notificação
+                    </Button>
+                    <Button onClick={handleSave} disabled={isSaving} className="bg-purple-900 hover:bg-purple-800 text-white">
+                        <Save className="w-4 h-4 mr-2" />
+                        {isSaving ? "Salvando..." : "Salvar Alterações"}
+                    </Button>
+                </div>
             </div>
+
+            {notifications.length === 0 && (
+                <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
+                    <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm mb-4">Nenhuma notificação criada ainda.</p>
+                    <Button onClick={addNotification} className="bg-purple-900 hover:bg-purple-800 text-white">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Criar primeira notificação
+                    </Button>
+                </div>
+            )}
 
             <div className="space-y-6">
                 {notifications.map((note) => (
@@ -67,6 +90,11 @@ export default function NotificationsPage() {
                         "bg-white/5 border rounded-xl p-6 transition-colors",
                         note.active ? "border-purple-500/50" : "border-white/10"
                     )}>
+                        <div className="flex justify-end mb-2">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-900/20" onClick={() => removeNotification(note.id)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                        </div>
                         <div className="flex flex-col md:flex-row gap-6">
                             <div className="flex-1 space-y-4">
                                 <div>
