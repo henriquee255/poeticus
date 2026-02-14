@@ -66,4 +66,6 @@ export interface SiteSettings {
     description: string;
     authorName?: string;
     instagramUrl?: string;
+    aboutContent?: string;
+    aboutTitle?: string;
 }
