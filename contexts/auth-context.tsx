@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchProfile = async (userId: string) => {
         const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-        if (data) setProfile(data)
+        setProfile(data || null)
     }
 
     const refreshProfile = async () => {

@@ -128,8 +128,16 @@ export default function PerfilPage() {
         ? savedPosts.filter(s => s.collection_id === selectedCollection)
         : savedPosts
 
-    if (loading || (!profile && user)) return <div className="min-h-screen bg-black pt-28 text-center text-gray-500">Carregando...</div>
-    if (!user || !profile) return null
+    if (loading) return <div className="min-h-screen bg-black pt-28 text-center text-gray-500">Carregando...</div>
+    if (!user) return null
+    if (!profile) {
+        fetch('/api/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id, username: user.email?.split('@')[0] || 'usuario', email: user.email })
+        }).then(() => refreshProfile())
+        return <div className="min-h-screen bg-black pt-28 text-center text-gray-500">Configurando perfil...</div>
+    }
 
     return (
         <div className="min-h-screen bg-black pt-28 pb-20 px-4">
