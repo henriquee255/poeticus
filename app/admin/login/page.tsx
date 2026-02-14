@@ -5,28 +5,36 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
 import { login } from "@/lib/storage"
+
+const ADMIN_EMAIL = "henriquee2501@gmail.com"
+const ADMIN_PASSWORD = "poeticus2025"
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [error, setError] = useState("")
     const router = useRouter()
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
+        setError("")
 
-        // Simulate API call
         setTimeout(() => {
-            login()
-            setIsLoading(false)
-            router.push("/admin")
-        }, 1500)
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                login()
+                router.push("/admin")
+            } else {
+                setError("Email ou senha incorretos. Acesso negado.")
+                setIsLoading(false)
+            }
+        }, 1000)
     }
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Background Effects */}
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[128px]" />
             <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-900/10 rounded-full blur-[128px]" />
 
@@ -46,6 +54,8 @@ export default function LoginPage() {
                         <input
                             type="email"
                             required
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
                             placeholder="seu@email.com"
                         />
@@ -56,10 +66,16 @@ export default function LoginPage() {
                         <input
                             type="password"
                             required
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
                             className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
                             placeholder="••••••••"
                         />
                     </div>
+
+                    {error && (
+                        <p className="text-red-400 text-sm text-center">{error}</p>
+                    )}
 
                     <Button
                         type="submit"

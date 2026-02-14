@@ -188,8 +188,8 @@ export default function PostPage() {
                 >
                     {/* Renderização segura do HTML do conteúdo */}
                     <div
-                        dangerouslySetInnerHTML={{ __html: post.content }}
-                        className="font-serif text-gray-200"
+                        dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br />') }}
+                        className="font-serif text-gray-200 whitespace-pre-line"
                     />
                 </motion.div>
 
