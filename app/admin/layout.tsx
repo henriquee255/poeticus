@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, PenTool, FileText, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, PenTool, FileText, Settings, LogOut, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { isAuthenticated, logout } from "@/lib/storage"
 import { useEffect, useState } from "react"
@@ -38,6 +38,7 @@ export default function AdminLayout({
         { name: "Novo Post", href: "/admin/new", icon: PenTool },
         { name: "Todos os Posts", href: "/admin/posts", icon: FileText },
         { name: "Categorias", href: "/admin/categories", icon: FileText },
+        { name: "Livros & Contos", href: "/admin/livros", icon: BookOpen },
         { name: "Anúncios", href: "/admin/ads", icon: Settings },
         { name: "Notificações", href: "/admin/notifications", icon: Settings },
         { name: "Configurações", href: "/admin/settings", icon: Settings },

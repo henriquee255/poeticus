@@ -2,9 +2,9 @@
 
 import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, Calendar, ChevronLeft, Type, Minus, Plus } from "lucide-react"
+import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart } from "lucide-react"
 import Link from "next/link"
-import { getPosts } from "@/lib/storage"
+import { getPosts, likePost } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -14,10 +14,12 @@ export default function PostPage() {
     const params = useParams()
     const slug = params.slug as string
 
-    const [post, setPost] = useState<Post | null>(null)
+    const [post, setPost] = useState<Post & { likes?: number } | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [fontSize, setFontSize] = useState(18)
     const [isReadingMode, setIsReadingMode] = useState(false)
+    const [hasLiked, setHasLiked] = useState(false)
+    const [isLiking, setIsLiking] = useState(false)
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -25,6 +27,12 @@ export default function PostPage() {
                 const allPosts = await getPosts()
                 const found = allPosts.find(p => p.slug === slug)
                 setPost(found || null)
+
+                // Simple local state check for likes
+                if (typeof window !== 'undefined') {
+                    const liked = localStorage.getItem(`liked_${found?.id}`)
+                    setHasLiked(!!liked)
+                }
             } catch (error) {
                 console.error("Error fetching post:", error)
             } finally {
@@ -34,6 +42,24 @@ export default function PostPage() {
         fetchPost()
         window.scrollTo(0, 0)
     }, [slug])
+
+    const handleLike = async () => {
+        if (!post || hasLiked || isLiking) return
+
+        setIsLiking(true)
+        try {
+            await likePost(post.id)
+            setHasLiked(true)
+            setPost(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null)
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(`liked_${post.id}`, 'true')
+            }
+        } catch (error) {
+            console.error("Error liking post:", error)
+        } finally {
+            setIsLiking(false)
+        }
+    }
 
     if (isLoading) {
         return (
@@ -169,12 +195,34 @@ export default function PostPage() {
 
                 {/* Rodapé do Post */}
                 <div className="mt-16 pt-8 border-t border-white/10 flex justify-between items-center">
-                    <div className="text-sm text-gray-500">
-                        Gostou? Compartilhe essa emoção.
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleLike}
+                            disabled={hasLiked || isLiking}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300",
+                                hasLiked
+                                    ? "bg-red-500/10 border-red-500/50 text-red-500"
+                                    : "bg-white/5 border-white/10 text-gray-400 hover:border-red-500/30 hover:text-red-400"
+                            )}
+                        >
+                            <Heart className={cn("w-5 h-5 transition-transform duration-300", hasLiked && "fill-current scale-110")} />
+                            <span className="text-sm font-medium">{post.likes || 0}</span>
+                        </button>
+                        <div className="text-sm text-gray-500">
+                            {hasLiked ? "Você tocou este verso." : "Gostou? Deixe seu toque."}
+                        </div>
                     </div>
                     <div className="flex gap-4">
-                        {/* Placeholder para botões de compartilhamento */}
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-400 hover:text-white"
+                            onClick={() => {
+                                navigator.clipboard.writeText(window.location.href)
+                                alert("Link copiado!")
+                            }}
+                        >
                             Copiar Link
                         </Button>
                     </div>

@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Clock, ArrowRight } from "lucide-react"
+import { Clock, ArrowRight, Heart } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getPosts } from "@/lib/storage"
 import { Post } from "@/types"
@@ -70,7 +70,13 @@ export function FeaturedPosts() {
                                         </p>
 
                                         <div className="flex items-center justify-between text-xs text-gray-500 border-t border-white/5 pt-6 mt-auto group-hover:border-white/10 group-hover:text-gray-400 transition-colors">
-                                            <span>{post.date}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span>{post.date}</span>
+                                                <div className="flex items-center gap-1 text-red-400/70">
+                                                    <Heart className="w-3 h-3 fill-current" />
+                                                    <span>{post.likes || 0}</span>
+                                                </div>
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
                                                 <span>{post.readTime}</span>

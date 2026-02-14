@@ -19,6 +19,7 @@ export interface Post {
     featured?: boolean;
     color?: string;
     status: 'published' | 'draft';
+    likes?: number;
 }
 
 export interface Ad {
@@ -37,6 +38,26 @@ export interface Notification {
     link?: string;
     active: boolean;
     type: 'info' | 'warning' | 'success';
+}
+
+export interface Book {
+    id: string;
+    title: string;
+    slug: string;
+    description?: string;
+    cover_image?: string;
+    author_name?: string;
+    status: 'published' | 'draft';
+    created_at?: string;
+}
+
+export interface Chapter {
+    id: string;
+    book_id: string;
+    title: string;
+    content?: string;
+    chapter_number: number;
+    created_at?: string;
 }
 
 export interface SiteSettings {

@@ -11,17 +11,29 @@ export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false)
 
     useEffect(() => {
-        setSettings(getSettings())
+        const fetchSettings = async () => {
+            try {
+                const data = await getSettings()
+                setSettings(data)
+            } catch (error) {
+                console.error("Error fetching settings:", error)
+            }
+        }
+        fetchSettings()
     }, [])
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!settings) return
         setIsSaving(true)
-        saveSettings(settings)
-        setTimeout(() => {
-            setIsSaving(false)
+        try {
+            await saveSettings(settings)
             alert("Configurações salvas com sucesso!")
-        }, 500)
+        } catch (error) {
+            console.error("Error saving settings:", error)
+            alert("Erro ao salvar configurações.")
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     if (!settings) return null

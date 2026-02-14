@@ -1,4 +1,4 @@
-import { Post, Ad, Notification, SiteSettings, Category } from "@/types"
+import { Post, Ad, Notification, SiteSettings, Category, Book, Chapter } from "@/types"
 
 const API_ROUTES = {
     POSTS: '/api/posts',
@@ -6,6 +6,7 @@ const API_ROUTES = {
     NOTIFICATIONS: '/api/notifications',
     CATEGORIES: '/api/categories',
     SETTINGS: '/api/settings',
+    LIVROS: '/api/livros',
 }
 
 // Helper for fetch
@@ -43,6 +44,7 @@ export const savePost = async (post: Post) => {
         cover_image: post.coverImage
     }
     // Delete the original TS fields that don't exist in DB
+    delete (dbPost as any).id
     delete (dbPost as any).author
     delete (dbPost as any).readTime
     delete (dbPost as any).coverImage
@@ -60,15 +62,28 @@ export const deletePost = async (id: string) => {
     return fetchApi(`${API_ROUTES.POSTS}/${id}`, { method: 'DELETE' })
 }
 
+export const likePost = async (id: string) => {
+    return fetchApi(API_ROUTES.POSTS, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'like' })
+    })
+}
+
 // Categories
-export const getCategories = async (): Promise<Category[]> => fetchApi(API_ROUTES.CATEGORIES)
-export const saveCategories = async (categories: Category[]) => {
-    // Simplified: our API currently takes one at a time or we can adjust it
-    // For now, let's just implement the fetch for the UI
+export const getCategories = async (): Promise<string[]> => fetchApi(API_ROUTES.CATEGORIES)
+
+export const addCategory = async (name: string) => {
     return fetchApi(API_ROUTES.CATEGORIES, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categories })
+        body: JSON.stringify({ name })
+    })
+}
+
+export const deleteCategory = async (name: string) => {
+    return fetchApi(`${API_ROUTES.CATEGORIES}?name=${encodeURIComponent(name)}`, {
+        method: 'DELETE'
     })
 }
 
@@ -109,3 +124,47 @@ export const login = () => {
 export const logout = () => {
     if (typeof window !== 'undefined') localStorage.setItem('poeticus_auth', 'false')
 }
+
+// Books
+export const getBooks = async (): Promise<Book[]> => fetchApi(API_ROUTES.LIVROS)
+
+export const getBookById = async (id: string): Promise<Book> =>
+    fetchApi(`${API_ROUTES.LIVROS}/${id}`)
+
+export const saveBook = async (book: Omit<Book, 'id' | 'created_at'>) =>
+    fetchApi(API_ROUTES.LIVROS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(book)
+    })
+
+export const updateBook = async (id: string, book: Partial<Book>) =>
+    fetchApi(`${API_ROUTES.LIVROS}/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(book)
+    })
+
+export const deleteBook = async (id: string) =>
+    fetchApi(`${API_ROUTES.LIVROS}/${id}`, { method: 'DELETE' })
+
+// Chapters
+export const getChapters = async (bookId: string): Promise<Chapter[]> =>
+    fetchApi(`${API_ROUTES.LIVROS}/${bookId}/capitulos`)
+
+export const saveChapter = async (bookId: string, chapter: Omit<Chapter, 'id' | 'book_id' | 'created_at'>) =>
+    fetchApi(`${API_ROUTES.LIVROS}/${bookId}/capitulos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chapter)
+    })
+
+export const updateChapter = async (bookId: string, capId: string, data: Partial<Chapter>) =>
+    fetchApi(`${API_ROUTES.LIVROS}/${bookId}/capitulos/${capId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+
+export const deleteChapter = async (bookId: string, capId: string) =>
+    fetchApi(`${API_ROUTES.LIVROS}/${bookId}/capitulos/${capId}`, { method: 'DELETE' })

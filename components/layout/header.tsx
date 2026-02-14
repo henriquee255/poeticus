@@ -60,6 +60,9 @@ export function Header() {
                     <Link href="/categoria/escritas-livres" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                         Escritas Livres
                     </Link>
+                    <Link href="/livros" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+                        Livros
+                    </Link>
                     <Link href="/sobre" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                         Sobre
                     </Link>

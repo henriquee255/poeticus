@@ -1,46 +1,47 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function GET() {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params
         const { data, error } = await supabase
-            .from('categories')
+            .from('books')
             .select('*')
+            .eq('id', id)
+            .single()
 
         if (error) throw error
-        return NextResponse.json(data.map((c: { name: string }) => c.name))
+        return NextResponse.json(data)
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
 
-export async function POST(request: Request) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { name } = await request.json()
+        const { id } = await params
+        const body = await request.json()
         const { data, error } = await supabase
-            .from('categories')
-            .insert([{ name }])
+            .from('books')
+            .update(body)
+            .eq('id', id)
             .select()
+            .single()
 
         if (error) throw error
-        return NextResponse.json(data[0])
+        return NextResponse.json(data)
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
-export async function DELETE(request: Request) {
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const { searchParams } = new URL(request.url)
-        const name = searchParams.get('name')
-
-        if (!name) {
-            return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-        }
-
+        const { id } = await params
         const { error } = await supabase
-            .from('categories')
+            .from('books')
             .delete()
-            .eq('name', name)
+            .eq('id', id)
 
         if (error) throw error
         return NextResponse.json({ success: true })
