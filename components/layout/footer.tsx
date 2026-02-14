@@ -10,7 +10,7 @@ export function Footer() {
 
     useEffect(() => {
         getSettings().then(s => {
-            if (s?.instagram) setInstagramUrl(s.instagram)
+            if (s?.instagramUrl) setInstagramUrl(s.instagramUrl)
         }).catch(() => {})
     }, [])
 
