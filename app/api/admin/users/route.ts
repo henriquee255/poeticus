@@ -92,11 +92,6 @@ export async function DELETE(request: Request) {
         const user_id = searchParams.get('user_id')
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
-        // Tenta deletar do auth (requer service_role key válida)
-        try {
-            await supabaseAdmin.auth.admin.deleteUser(user_id)
-        } catch {}
-
         // Deleta o perfil
         await fetch(`${SUPA_URL}/rest/v1/profiles?id=eq.${user_id}`, { method: 'DELETE', headers: h })
         return NextResponse.json({ ok: true })
