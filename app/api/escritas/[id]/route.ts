@@ -7,18 +7,36 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     try {
-        // Increment view count
         const res = await fetch(`${SUPA_URL}/rest/v1/escritas_livres?id=eq.${id}&select=*,profiles(username,avatar_url)`, { headers: h })
         const data = await res.json()
         const item = Array.isArray(data) ? data[0] : null
         if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-        // Increment views
-        await fetch(`${SUPA_URL}/rest/v1/escritas_livres?id=eq.${id}`, {
-            method: 'PATCH',
-            headers: { ...h, 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ views: (item.views || 0) + 1 })
-        })
+        // Unique view per IP
+        const forwarded = request.headers.get('x-forwarded-for')
+        const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
+        const ipHash = Buffer.from(ip).toString('base64').replace(/=/g, '')
+
+        const viewCheck = await fetch(
+            `${SUPA_URL}/rest/v1/escritas_views?escrita_id=eq.${id}&ip_hash=eq.${ipHash}&select=escrita_id`,
+            { headers: h }
+        )
+        const existing = await viewCheck.json()
+
+        if (!Array.isArray(existing) || existing.length === 0) {
+            // New unique visitor — register and increment
+            await fetch(`${SUPA_URL}/rest/v1/escritas_views`, {
+                method: 'POST',
+                headers: { ...h, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ escrita_id: id, ip_hash: ipHash })
+            })
+            await fetch(`${SUPA_URL}/rest/v1/escritas_livres?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: { ...h, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ views: (item.views || 0) + 1 })
+            })
+            item.views = (item.views || 0) + 1
+        }
 
         return NextResponse.json(item)
     } catch (e: any) {
