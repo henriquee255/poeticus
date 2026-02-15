@@ -14,7 +14,8 @@ import { useRouter } from "next/navigation"
 const navLinks = [
     { label: "Amor", href: "/categoria/amor" },
     { label: "Reflexões", href: "/categoria/reflexoes" },
-    { label: "Escritas Livres", href: "/categoria/escritas-livres" },
+    { label: "Escritas Livres", href: "/escritas-livres" },
+    { label: "Comunidade", href: "/comunidade" },
     { label: "Livros", href: "/livros" },
     { label: "Sobre", href: "/sobre" },
 ]
