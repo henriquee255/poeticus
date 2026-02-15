@@ -12,24 +12,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         const item = Array.isArray(data) ? data[0] : null
         if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-        // Unique view per IP
+        // Unique view per IP (requires escritas_views table — gracefully falls back to always counting)
         const forwarded = request.headers.get('x-forwarded-for')
         const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
         const ipHash = Buffer.from(ip).toString('base64').replace(/=/g, '')
 
-        const viewCheck = await fetch(
-            `${SUPA_URL}/rest/v1/escritas_views?escrita_id=eq.${id}&ip_hash=eq.${ipHash}&select=escrita_id`,
-            { headers: h }
-        )
-        const existing = await viewCheck.json()
+        let shouldCount = true
+        try {
+            const viewCheck = await fetch(
+                `${SUPA_URL}/rest/v1/escritas_views?escrita_id=eq.${id}&ip_hash=eq.${ipHash}&select=escrita_id`,
+                { headers: h }
+            )
+            const existing = await viewCheck.json()
+            if (Array.isArray(existing) && existing.length > 0) {
+                shouldCount = false // already visited
+            } else if (Array.isArray(existing)) {
+                // Register this visit
+                await fetch(`${SUPA_URL}/rest/v1/escritas_views`, {
+                    method: 'POST',
+                    headers: { ...h, 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({ escrita_id: id, ip_hash: ipHash })
+                })
+            }
+        } catch {
+            // Table doesn't exist yet — count anyway
+        }
 
-        if (!Array.isArray(existing) || existing.length === 0) {
-            // New unique visitor — register and increment
-            await fetch(`${SUPA_URL}/rest/v1/escritas_views`, {
-                method: 'POST',
-                headers: { ...h, 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ escrita_id: id, ip_hash: ipHash })
-            })
+        if (shouldCount) {
             await fetch(`${SUPA_URL}/rest/v1/escritas_livres?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: { ...h, 'Prefer': 'return=minimal' },
