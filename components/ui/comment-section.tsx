@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Send, Trash2, User } from "lucide-react"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
+import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 interface Comment {
@@ -108,7 +108,7 @@ export function CommentSection({ postId }: { postId: string }) {
                                 <span className="text-sm font-medium text-purple-300">@{c.profiles?.username || 'anônimo'}</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-gray-600">
-                                        {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: ptBR })}
+                                        {format(new Date(c.created_at), "dd MMM yyyy", { locale: ptBR })}
                                     </span>
                                     {user?.id === c.user_id && (
                                         <button onClick={() => handleDelete(c.id)} className="text-gray-600 hover:text-red-400 transition-colors">

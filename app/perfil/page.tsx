@@ -78,13 +78,17 @@ export default function PerfilPage() {
         let avatar_url = profile?.avatar_url || ""
 
         if (avatarFile) {
-            // Upload to Supabase Storage
-            const ext = avatarFile.name.split('.').pop()
-            const path = `avatars/${user.id}.${ext}`
-            const { error } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
-            if (!error) {
-                const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-                avatar_url = data.publicUrl
+            const form = new FormData()
+            form.append('file', avatarFile)
+            form.append('user_id', user.id)
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: form })
+            const uploadData = await uploadRes.json()
+            if (uploadData.url) {
+                avatar_url = uploadData.url + '?t=' + Date.now()
+            } else {
+                showToast("Erro ao enviar foto: " + (uploadData.error || 'desconhecido'))
+                setSaving(false)
+                return
             }
         }
 

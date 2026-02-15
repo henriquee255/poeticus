@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { user_id, username, email, is_blocked } = await request.json()
+        const { user_id, username, email, is_blocked, password } = await request.json()
         if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
 
         const profileUpdate: any = {}
@@ -82,6 +82,20 @@ export async function PATCH(request: Request) {
                 method: 'PATCH',
                 headers: { ...h, 'Prefer': 'return=minimal' },
                 body: JSON.stringify(profileUpdate)
+            })
+        }
+
+        // Troca de senha via Supabase Admin API (requer service role key)
+        if (password) {
+            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || KEY
+            await fetch(`${SUPA_URL}/auth/v1/admin/users/${user_id}`, {
+                method: 'PUT',
+                headers: {
+                    'apikey': serviceKey,
+                    'Authorization': `Bearer ${serviceKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password })
             })
         }
 

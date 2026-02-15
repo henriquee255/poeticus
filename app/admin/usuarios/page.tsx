@@ -63,9 +63,11 @@ export default function UsuariosPage() {
 
     const handleEdit = async () => {
         if (!editUser) return
+        if (fPassword && fPassword.length < 6) return showToast("Senha deve ter ao menos 6 caracteres")
         const body: any = { user_id: editUser.id }
         if (fUsername) body.username = fUsername
         if (fEmail && fEmail !== editUser.email) body.email = fEmail
+        if (fPassword) body.password = fPassword
 
         const res = await fetch('/api/admin/users', {
             method: 'PATCH',
@@ -244,23 +246,24 @@ export default function UsuariosPage() {
                                 />
                             </div>
 
-                            {modal === 'create' && (
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-2">Senha</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showPass ? 'text' : 'password'}
-                                            value={fPassword}
-                                            onChange={e => setFPassword(e.target.value)}
-                                            className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 pr-10 text-white focus:outline-none focus:border-purple-500 transition-colors text-sm"
-                                            placeholder="mínimo 6 caracteres"
-                                        />
-                                        <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
-                                            {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
-                                    </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-2">
+                                    {modal === 'create' ? 'Senha' : 'Nova senha (opcional)'}
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPass ? 'text' : 'password'}
+                                        value={fPassword}
+                                        onChange={e => setFPassword(e.target.value)}
+                                        className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 pr-10 text-white focus:outline-none focus:border-purple-500 transition-colors text-sm"
+                                        placeholder={modal === 'create' ? 'mínimo 6 caracteres' : 'deixe em branco para não alterar'}
+                                        required={modal === 'create'}
+                                    />
+                                    <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
+                                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
                         <div className="flex gap-3 mt-6">
