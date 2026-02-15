@@ -4,7 +4,7 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     try {
         const { user_id } = await request.json()
@@ -40,7 +40,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     await fetch(`${SUPA_URL}/rest/v1/feed_posts?id=eq.${id}`, { method: 'DELETE', headers: h })
     return NextResponse.json({ ok: true })

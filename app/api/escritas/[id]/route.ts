@@ -4,7 +4,7 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     try {
         // Increment view count
@@ -26,7 +26,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     try {
         const body = await request.json()
@@ -81,7 +81,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     await fetch(`${SUPA_URL}/rest/v1/escritas_livres?id=eq.${id}`, { method: 'DELETE', headers: h })
     return NextResponse.json({ ok: true })

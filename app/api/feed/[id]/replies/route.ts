@@ -4,7 +4,7 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const res = await fetch(
         `${SUPA_URL}/rest/v1/feed_replies?post_id=eq.${id}&order=created_at.asc&select=*,profiles(username,avatar_url)`,
@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json(Array.isArray(data) ? data : [])
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     try {
         const { user_id, content } = await request.json()
