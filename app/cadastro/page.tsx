@@ -28,7 +28,21 @@ export default function CadastroPage() {
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
 
         if (signUpError) {
-            setError(signUpError.message)
+            if (signUpError.message.toLowerCase().includes('already registered') || signUpError.message.toLowerCase().includes('already been registered')) {
+                // Verifica se está bloqueado consultando por email diretamente
+                const { data: existingProfile } = await supabase
+                    .from('profiles')
+                    .select('is_blocked')
+                    .eq('email', email)
+                    .single()
+                if (existingProfile?.is_blocked) {
+                    setError("Este email está desativado. Entre em contato com o administrador.")
+                } else {
+                    setError("Este email já está cadastrado. Faça login.")
+                }
+            } else {
+                setError(signUpError.message)
+            }
             setLoading(false)
             return
         }
