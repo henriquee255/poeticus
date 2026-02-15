@@ -17,6 +17,7 @@ const navLinks = [
     { label: "Escritas Livres", href: "/escritas-livres" },
     { label: "Comunidade", href: "/comunidade" },
     { label: "Livros", href: "/livros" },
+    { label: "Feedback", href: "/feedback" },
     { label: "Sobre", href: "/sobre" },
 ]
 

@@ -9,10 +9,12 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const type = searchParams.get('type')
         const status = searchParams.get('status')
+        const user_id = searchParams.get('user_id')
 
         let query = `${SUPA_URL}/rest/v1/feedback?order=created_at.desc`
         if (type) query += `&type=eq.${type}`
         if (status) query += `&status=eq.${status}`
+        if (user_id) query += `&user_id=eq.${user_id}`
 
         const res = await fetch(query, { headers: h })
         const data = await res.json()

@@ -7,15 +7,21 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
-        const sort = searchParams.get('sort') || 'recent' // recent | likes | views
+        const sort = searchParams.get('sort') || 'recent'
         const category = searchParams.get('category')
         const admin = searchParams.get('admin')
-        const status = searchParams.get('status') || (admin ? undefined : 'published')
+        const user_id = searchParams.get('user_id')
+        const statusParam = searchParams.get('status')
+        // If user_id or admin: show all statuses unless status explicitly set
+        const status = statusParam !== null && statusParam !== ''
+            ? statusParam
+            : (admin || user_id) ? undefined : 'published'
 
         let query = `${SUPA_URL}/rest/v1/escritas_livres?select=*,profiles(username,avatar_url)`
 
         if (status) query += `&status=eq.${status}`
         if (category) query += `&category=eq.${category}`
+        if (user_id) query += `&user_id=eq.${user_id}`
 
         if (sort === 'likes') query += '&order=likes.desc,created_at.desc'
         else if (sort === 'views') query += '&order=views.desc,created_at.desc'
@@ -31,15 +37,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { user_id, title, content, category } = await request.json()
+        const { user_id, title, content, category, image_url } = await request.json()
         if (!user_id || !title || !content) {
             return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
         }
 
+        const body: any = { user_id, title, content, category: category || 'geral', status: 'pending' }
+        if (image_url) body.image_url = image_url
+
         const res = await fetch(`${SUPA_URL}/rest/v1/escritas_livres`, {
             method: 'POST',
             headers: { ...h, 'Prefer': 'return=representation' },
-            body: JSON.stringify({ user_id, title, content, category: category || 'geral', status: 'pending' })
+            body: JSON.stringify(body)
         })
         const data = await res.json()
         return NextResponse.json(data[0] || {})

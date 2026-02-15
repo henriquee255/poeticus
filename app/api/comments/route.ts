@@ -9,10 +9,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const post_id = searchParams.get('post_id')
     const admin = searchParams.get('admin')
+    const user_id = searchParams.get('user_id')
 
-    if (!post_id && !admin) return NextResponse.json([])
+    if (!post_id && !admin && !user_id) return NextResponse.json([])
 
-    const filter = post_id ? `post_id=eq.${post_id}&` : ''
+    let filter = ''
+    if (post_id) filter += `post_id=eq.${post_id}&`
+    if (user_id) filter += `user_id=eq.${user_id}&`
+
     const res = await fetch(
         `${SUPA_URL}/rest/v1/comments?${filter}order=created_at.desc&select=*,profiles(username,avatar_url)`,
         { headers: h }
@@ -63,7 +67,6 @@ export async function DELETE(request: Request) {
     const user_id = searchParams.get('user_id')
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-    // Admin delete (user_id=admin) ou delete pelo próprio usuário
     const filter = (!user_id || user_id === 'admin')
         ? `id=eq.${id}`
         : `id=eq.${id}&user_id=eq.${user_id}`
