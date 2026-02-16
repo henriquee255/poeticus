@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json' }
+import { supabase } from '@/lib/supabase'
 
 export async function GET(request: Request) {
     try {
@@ -12,24 +9,23 @@ export async function GET(request: Request) {
         const admin = searchParams.get('admin')
         const user_id = searchParams.get('user_id')
         const statusParam = searchParams.get('status')
-        // If user_id or admin: show all statuses unless status explicitly set
         const status = statusParam !== null && statusParam !== ''
             ? statusParam
             : (admin || user_id) ? undefined : 'published'
 
-        let query = `${SUPA_URL}/rest/v1/escritas_livres?select=*,profiles(username,avatar_url)`
+        let q = supabase.from('escritas_livres').select('*,profiles(username,avatar_url)')
 
-        if (status) query += `&status=eq.${status}`
-        if (category) query += `&category=eq.${category}`
-        if (user_id) query += `&user_id=eq.${user_id}`
+        if (status) q = q.eq('status', status)
+        if (category) q = q.eq('category', category)
+        if (user_id) q = q.eq('user_id', user_id)
 
-        if (sort === 'likes') query += '&order=likes.desc,created_at.desc'
-        else if (sort === 'views') query += '&order=views.desc,created_at.desc'
-        else query += '&order=pinned.desc,created_at.desc'
+        if (sort === 'likes') q = q.order('likes', { ascending: false }).order('created_at', { ascending: false })
+        else if (sort === 'views') q = q.order('views', { ascending: false }).order('created_at', { ascending: false })
+        else q = q.order('pinned', { ascending: false }).order('created_at', { ascending: false })
 
-        const res = await fetch(query, { headers: h })
-        const data = await res.json()
-        return NextResponse.json(Array.isArray(data) ? data : [])
+        const { data, error } = await q
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json(data || [])
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })
     }
@@ -45,15 +41,10 @@ export async function POST(request: Request) {
         const body: any = { user_id, title, content, category: category || 'geral', status: 'published' }
         if (image_url) body.image_url = image_url
 
-        const res = await fetch(`${SUPA_URL}/rest/v1/escritas_livres`, {
-            method: 'POST',
-            headers: { ...h, 'Prefer': 'return=representation' },
-            body: JSON.stringify(body)
-        })
-        const data = await res.json()
-        if (!Array.isArray(data)) return NextResponse.json({ error: data?.message || 'Erro ao publicar' }, { status: 400 })
-        if (!data[0]?.id) return NextResponse.json({ error: 'Não foi possível publicar. Verifique as permissões da tabela no Supabase (RLS).' }, { status: 400 })
-        return NextResponse.json(data[0])
+        const { data, error } = await supabase.from('escritas_livres').insert(body).select().single()
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+        if (!data?.id) return NextResponse.json({ error: 'Erro ao publicar' }, { status: 400 })
+        return NextResponse.json(data)
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })
     }
