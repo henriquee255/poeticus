@@ -61,6 +61,12 @@ export interface Chapter {
     created_at?: string;
 }
 
+export interface NavLink {
+    label: string;
+    href: string;
+    enabled: boolean;
+}
+
 export interface SiteSettings {
     name: string;
     description: string;
@@ -68,4 +74,5 @@ export interface SiteSettings {
     instagramUrl?: string;
     aboutContent?: string;
     aboutTitle?: string;
+    navLinks?: NavLink[];
 }

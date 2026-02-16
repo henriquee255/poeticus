@@ -8,7 +8,7 @@ import { motion } from "framer-motion"
 import {
     User, Bookmark, Heart, FolderOpen, Plus, Trash2, LogOut,
     Camera, Save, Eye, EyeOff, PenLine, MessageCircle, MessageSquare,
-    Users, Settings, ChevronRight
+    Users, Settings, ChevronRight, Pencil
 } from "lucide-react"
 import { getPosts } from "@/lib/storage"
 import { Post } from "@/types"
@@ -19,13 +19,14 @@ import { ptBR } from "date-fns/locale"
 interface Collection { id: string; name: string }
 interface SavedPost { id: string; post_id: string; collection_id?: string }
 
-type Tab = 'salvos' | 'curtidos' | 'escritas' | 'posts' | 'comentarios' | 'feedbacks' | 'configuracoes'
+type Tab = 'salvos' | 'curtidos' | 'escritas' | 'posts' | 'grupos' | 'comentarios' | 'feedbacks' | 'configuracoes'
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
     { key: 'salvos', label: 'Salvos', icon: Bookmark },
     { key: 'curtidos', label: 'Curtidos', icon: Heart },
     { key: 'escritas', label: 'Escritas', icon: PenLine },
     { key: 'posts', label: 'Posts', icon: Users },
+    { key: 'grupos', label: 'Grupos', icon: Users },
     { key: 'comentarios', label: 'Comentários', icon: MessageCircle },
     { key: 'feedbacks', label: 'Feedbacks', icon: MessageSquare },
     { key: 'configuracoes', label: 'Config', icon: Settings },
@@ -55,6 +56,7 @@ export default function PerfilPage() {
     // New tab data
     const [escritas, setEscritas] = useState<any[]>([])
     const [feedPosts, setFeedPosts] = useState<any[]>([])
+    const [grupos, setGrupos] = useState<any[]>([])
     const [comentarios, setComentarios] = useState<any[]>([])
     const [feedbacks, setFeedbacks] = useState<any[]>([])
 
@@ -82,6 +84,24 @@ export default function PerfilPage() {
         if (!user) return
         if (tab === 'escritas' && escritas.length === 0) {
             fetch('/api/escritas?user_id=' + user.id + '&status=').then(r => r.json()).then(d => setEscritas(Array.isArray(d) ? d : []))
+        }
+        if (tab === 'grupos' && grupos.length === 0) {
+            // Get groups where user is a member
+            fetch('/api/groups').then(r => r.json()).then(async (allGroups) => {
+                if (!Array.isArray(allGroups)) return
+                // Filter groups where user is a member by checking members
+                const myGroups: any[] = []
+                for (const g of allGroups) {
+                    if (g.creator_id === user.id) { myGroups.push({ ...g, myRole: 'creator' }); continue }
+                    const res = await fetch(`/api/groups/${g.id}/members`)
+                    const members = await res.json()
+                    if (Array.isArray(members)) {
+                        const me = members.find((m: any) => m.user_id === user.id)
+                        if (me) myGroups.push({ ...g, myRole: me.role || 'member' })
+                    }
+                }
+                setGrupos(myGroups)
+            })
         }
         if (tab === 'posts' && feedPosts.length === 0) {
             fetch('/api/feed?user_id=' + user.id).then(r => r.json()).then(d => setFeedPosts(Array.isArray(d) ? d : []))
@@ -151,6 +171,13 @@ export default function PerfilPage() {
 
     const getPostById = (post_id: string) => allPosts.find(p => p.id === post_id)
     const filteredSaved = selectedCollection ? savedPosts.filter(s => s.collection_id === selectedCollection) : savedPosts
+
+    const handleDeleteEscrita = async (id: string) => {
+        if (!confirm('Excluir esta escrita permanentemente?')) return
+        await fetch(`/api/escritas/${id}`, { method: 'DELETE' })
+        setEscritas(prev => prev.filter(e => e.id !== id))
+        showToast('Escrita excluída')
+    }
 
     const statusLabel = (s: string) => s === 'published' ? 'Publicado' : s === 'pending' ? 'Aguardando' : 'Rejeitado'
     const statusColor = (s: string) => s === 'published' ? 'text-green-400' : s === 'pending' ? 'text-yellow-400' : 'text-red-400'
@@ -286,7 +313,16 @@ export default function PerfilPage() {
                                             <Link href={'/escritas-livres/' + e.id} className="text-white hover:text-purple-300 font-serif font-medium transition-colors block truncate">{e.title}</Link>
                                             <p className="text-xs text-gray-600 mt-1">{format(new Date(e.created_at), 'dd MMM yyyy', { locale: ptBR })} · {e.likes || 0} curtidas · {e.views || 0} views</p>
                                         </div>
-                                        <ChevronRight className="w-4 h-4 text-gray-600 shrink-0 mt-1" />
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <Link href={'/escritas-livres/' + e.id + '/editar'}
+                                                className="p-1.5 text-gray-600 hover:text-purple-400 transition-colors rounded-lg hover:bg-purple-900/10" title="Editar">
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </Link>
+                                            <button onClick={() => handleDeleteEscrita(e.id)}
+                                                className="p-1.5 text-gray-600 hover:text-red-400 transition-colors rounded-lg hover:bg-red-900/10" title="Excluir">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -317,6 +353,46 @@ export default function PerfilPage() {
                                         <p className="text-gray-200 text-sm leading-relaxed line-clamp-3 whitespace-pre-wrap">{p.content}</p>
                                         <p className="text-xs text-gray-600 mt-2">{format(new Date(p.created_at), 'dd MMM yyyy, HH:mm', { locale: ptBR })} · {p.likes || 0} curtidas</p>
                                     </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Tab: Grupos */}
+                {tab === 'grupos' && (
+                    <div>
+                        <div className="flex items-center justify-between mb-5">
+                            <p className="text-gray-500 text-sm">{grupos.length} grupo(s)</p>
+                            <Link href="/comunidade" className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                                <Plus className="w-4 h-4" /> Explorar grupos
+                            </Link>
+                        </div>
+                        {grupos.length === 0 ? (
+                            <div className="text-center py-12 text-gray-600">
+                                <Users className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                                <p className="text-sm mb-4">Você não está em nenhum grupo ainda.</p>
+                                <Link href="/comunidade" className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-xl transition-colors">Ir para comunidade</Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {grupos.map(g => (
+                                    <Link key={g.id} href={'/comunidade/grupos/' + g.id}
+                                        className="flex items-center gap-3 bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:border-purple-500/20 hover:bg-white/[0.06] transition-all group">
+                                        <div className="w-12 h-12 rounded-xl bg-purple-900/40 border border-purple-500/20 overflow-hidden flex items-center justify-center shrink-0">
+                                            {g.image_url ? <img src={g.image_url} alt="" className="w-full h-full object-cover" /> : <span className="text-purple-400 font-bold text-lg">#</span>}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-medium truncate">{g.name}</p>
+                                            <p className="text-xs text-gray-500">{g.member_count || 0} membros</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {g.myRole === 'creator' && <span className="text-[10px] px-2 py-0.5 bg-yellow-900/20 border border-yellow-500/20 text-yellow-400 rounded-full">👑 Criador</span>}
+                                            {g.myRole === 'moderator' && <span className="text-[10px] px-2 py-0.5 bg-purple-900/20 border border-purple-500/20 text-purple-300 rounded-full">🛡️ Mod</span>}
+                                            {g.myRole === 'member' && <span className="text-[10px] px-2 py-0.5 bg-white/5 border border-white/10 text-gray-500 rounded-full">Membro</span>}
+                                            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
+                                        </div>
+                                    </Link>
                                 ))}
                             </div>
                         )}

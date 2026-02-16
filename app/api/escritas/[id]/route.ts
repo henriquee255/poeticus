@@ -89,11 +89,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
         }
 
-        // Admin update
+        // Admin/user update
+        const { title, content, category } = body
         const update: any = {}
         if (status !== undefined) update.status = status
         if (pinned !== undefined) update.pinned = pinned
         if (likes !== undefined) update.likes = likes
+        if (title !== undefined) update.title = title
+        if (content !== undefined) update.content = content
+        if (category !== undefined) update.category = category
 
         if (Object.keys(update).length > 0) {
             await fetch(`${SUPA_URL}/rest/v1/escritas_livres?id=eq.${id}`, {

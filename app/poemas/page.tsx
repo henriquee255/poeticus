@@ -3,28 +3,20 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
-import { Clock, Filter, X } from "lucide-react"
+import { Filter, X } from "lucide-react"
 import { Post, Category } from "@/types"
 import { getPosts } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-const CATEGORIES: (Category | 'Todas')[] = [
-    'Todas',
-    'Amor',
-    'Reflexões',
-    'Tristeza',
-    'Esperança',
-    'Existencial',
-    'Motivacional',
-    'Escritas Livres'
-]
+const DEFAULT_CATS = ['Todas', 'Amor', 'Reflexões', 'Tristeza', 'Esperança', 'Existencial', 'Motivacional', 'Escritas Livres']
 
 export default function PoemasPage() {
-    const [activeCategory, setActiveCategory] = useState<Category | 'Todas'>('Todas')
+    const [activeCategory, setActiveCategory] = useState<string>('Todas')
     const [allPosts, setAllPosts] = useState<Post[]>([])
     const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [categories, setCategories] = useState<string[]>(DEFAULT_CATS)
 
     useEffect(() => {
         const fetchPosts = async () => {
@@ -42,7 +34,17 @@ export default function PoemasPage() {
         fetchPosts()
     }, [])
 
-    const handleCategoryChange = (category: Category | 'Todas') => {
+    useEffect(() => {
+        fetch('/api/categories').then(r => r.json()).then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+                const cats = data.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean)
+                const merged = [...new Set([...DEFAULT_CATS, ...cats])]
+                setCategories(merged)
+            }
+        }).catch(() => {})
+    }, [])
+
+    const handleCategoryChange = (category: string) => {
         setActiveCategory(category)
         if (category === 'Todas') {
             setFilteredPosts(allPosts)
@@ -78,7 +80,7 @@ export default function PoemasPage() {
                 {/* Filtros */}
                 <div className="mb-12 overflow-x-auto pb-4 scrollbar-hide">
                     <div className="flex justify-center min-w-max gap-2 px-4">
-                        {CATEGORIES.map((cat) => (
+                        {categories.map((cat) => (
                             <button
                                 key={cat}
                                 onClick={() => handleCategoryChange(cat)}
@@ -133,10 +135,7 @@ export default function PoemasPage() {
                                         {/* Meta */}
                                         <div className="flex items-center justify-between text-xs text-gray-500 border-t border-white/5 pt-6 mt-auto">
                                             <span>{post.date}</span>
-                                            <div className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                <span>{post.readTime}</span>
-                                            </div>
+                                            
                                         </div>
 
                                         {/* Efeito Glow no Hover */}

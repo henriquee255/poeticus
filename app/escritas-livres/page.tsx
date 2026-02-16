@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Heart, Eye, PenLine, Pin, User } from "lucide-react"
+import { Heart, Eye, PenLine, Pin, User, Search, X } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { format } from "date-fns"
@@ -22,7 +22,7 @@ interface Escrita {
     profiles: { username: string; avatar_url?: string }
 }
 
-const CATEGORIES = ['todos', 'geral', 'amor', 'reflexão', 'saudade', 'natureza', 'outro']
+const DEFAULT_CATS = ['todos', 'geral', 'amor', 'reflexão', 'saudade', 'natureza', 'cristã', 'outro']
 
 export default function EscritasLivresPage() {
     const { user } = useAuth()
@@ -30,6 +30,8 @@ export default function EscritasLivresPage() {
     const [loading, setLoading] = useState(true)
     const [sort, setSort] = useState('recent')
     const [category, setCategory] = useState('todos')
+    const [search, setSearch] = useState('')
+    const [categories, setCategories] = useState<string[]>(DEFAULT_CATS)
 
     useEffect(() => {
         setLoading(true)
@@ -40,7 +42,23 @@ export default function EscritasLivresPage() {
             .then(data => { setEscritas(Array.isArray(data) ? data : []); setLoading(false) })
     }, [sort, category])
 
+    useEffect(() => {
+        fetch('/api/categories').then(r => r.json()).then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+                const cats = data.map((c: any) => (typeof c === 'string' ? c : c.name)?.toLowerCase().trim()).filter(Boolean)
+                const merged = [...new Set([...DEFAULT_CATS, ...cats])]
+                setCategories(merged)
+            }
+        }).catch(() => {})
+    }, [])
+
     const preview = (content: string) => content.replace(/<[^>]+>/g, '').slice(0, 120) + '...'
+
+    const filtered = escritas.filter(e => {
+        if (!search.trim()) return true
+        const q = search.toLowerCase()
+        return e.title.toLowerCase().includes(q) || e.profiles?.username?.toLowerCase().includes(q) || preview(e.content).toLowerCase().includes(q)
+    })
 
     return (
         <div className="min-h-screen bg-black">
@@ -68,6 +86,22 @@ export default function EscritasLivresPage() {
                     )}
                 </div>
 
+                {/* Search */}
+                <div className="relative mb-5">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Buscar por título, autor..."
+                        className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-11 pr-10 py-3 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-white">
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
                 {/* Filters */}
                 <div className="flex flex-wrap gap-3 mb-8">
                     <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1">
@@ -82,7 +116,7 @@ export default function EscritasLivresPage() {
                         ))}
                     </div>
                     <div className="flex gap-1 flex-wrap">
-                        {CATEGORIES.map(cat => (
+                        {categories.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setCategory(cat)}
@@ -96,14 +130,14 @@ export default function EscritasLivresPage() {
 
                 {/* List */}
                 {loading && <div className="text-center py-16 text-gray-500">Carregando...</div>}
-                {!loading && escritas.length === 0 && (
+                {!loading && filtered.length === 0 && (
                     <div className="text-center py-16 text-gray-500">
                         <PenLine className="w-8 h-8 mx-auto mb-3 opacity-30" />
-                        <p>Nenhuma escrita ainda. Seja o primeiro!</p>
+                        <p>{search ? 'Nenhuma escrita encontrada para essa busca.' : 'Nenhuma escrita ainda. Seja o primeiro!'}</p>
                     </div>
                 )}
                 <div className="space-y-4">
-                    {escritas.map((e, i) => (
+                    {filtered.map((e, i) => (
                         <motion.div
                             key={e.id}
                             initial={{ opacity: 0, y: 10 }}

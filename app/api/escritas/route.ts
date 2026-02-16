@@ -42,7 +42,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
         }
 
-        const body: any = { user_id, title, content, category: category || 'geral', status: 'pending' }
+        const body: any = { user_id, title, content, category: category || 'geral', status: 'published' }
         if (image_url) body.image_url = image_url
 
         const res = await fetch(`${SUPA_URL}/rest/v1/escritas_livres`, {

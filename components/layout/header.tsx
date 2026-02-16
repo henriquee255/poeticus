@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Instagram, Menu, X, User, LogOut, BookmarkCheck } from "lucide-react"
+import { Instagram, Menu, X, User, LogOut, BookmarkCheck, Bell } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { SearchBar } from "@/components/ui/search-bar"
@@ -11,14 +11,20 @@ import { SiteSettings } from "@/types"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 
-const navLinks = [
-    { label: "Amor", href: "/categoria/amor" },
-    { label: "Reflexões", href: "/categoria/reflexoes" },
-    { label: "Escritas Livres", href: "/escritas-livres" },
-    { label: "Comunidade", href: "/comunidade" },
-    { label: "Livros", href: "/livros" },
-    { label: "Feedback", href: "/feedback" },
-    { label: "Sobre", href: "/sobre" },
+interface SiteUpdate { id: string; title: string; content: string; type: string; created_at: string }
+
+const UPDATE_TYPE_ICON: Record<string, string> = {
+    update: '🔄', feature: '✨', fix: '🐛', news: '📢'
+}
+
+const DEFAULT_NAV_LINKS = [
+    { label: "Amor", href: "/categoria/amor", enabled: true },
+    { label: "Reflexões", href: "/categoria/reflexoes", enabled: true },
+    { label: "Escritas Livres", href: "/escritas-livres", enabled: true },
+    { label: "Comunidade", href: "/comunidade", enabled: true },
+    { label: "Livros", href: "/livros", enabled: true },
+    { label: "Feedback", href: "/feedback", enabled: true },
+    { label: "Sobre", href: "/sobre", enabled: true },
 ]
 
 export function Header() {
@@ -26,7 +32,11 @@ export function Header() {
     const [settings, setSettings] = useState<SiteSettings | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
     const [userMenuOpen, setUserMenuOpen] = useState(false)
+    const [bellOpen, setBellOpen] = useState(false)
+    const [updates, setUpdates] = useState<SiteUpdate[]>([])
+    const [seenCount, setSeenCount] = useState(0)
     const userMenuRef = useRef<HTMLDivElement>(null)
+    const bellRef = useRef<HTMLDivElement>(null)
     const { user, profile, signOut } = useAuth()
     const router = useRouter()
 
@@ -34,8 +44,39 @@ export function Header() {
         getSettings().then(setSettings).catch(console.error)
         const handleScroll = () => setIsScrolled(window.scrollY > 10)
         window.addEventListener("scroll", handleScroll)
+        // Load updates for bell
+        fetch('/api/updates').then(r => r.json()).then(data => {
+            if (Array.isArray(data)) {
+                setUpdates(data)
+                const seen = parseInt(localStorage.getItem('bell_seen_count') || '0')
+                setSeenCount(seen)
+            }
+        }).catch(() => {})
         return () => window.removeEventListener("scroll", handleScroll)
     }, [])
+
+    // Close bell on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
+    const unreadCount = Math.max(0, updates.length - seenCount)
+    const activeNavLinks = (settings?.navLinks && settings.navLinks.length > 0
+        ? settings.navLinks.filter(l => l.enabled)
+        : DEFAULT_NAV_LINKS.filter(l => l.enabled)
+    )
+
+    const handleOpenBell = () => {
+        setBellOpen(p => !p)
+        if (!bellOpen) {
+            setSeenCount(updates.length)
+            localStorage.setItem('bell_seen_count', String(updates.length))
+        }
+    }
 
     useEffect(() => {
         const onResize = () => { if (window.innerWidth >= 768) setMenuOpen(false) }
@@ -76,7 +117,7 @@ export function Header() {
 
                     {/* Desktop Nav */}
                     <nav className="hidden md:flex items-center gap-8">
-                        {navLinks.map(l => (
+                        {activeNavLinks.map(l => (
                             <Link key={l.href} href={l.href} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                                 {l.label}
                             </Link>
@@ -95,6 +136,46 @@ export function Header() {
                                 </Button>
                             </a>
                         )}
+
+                        {/* Bell */}
+                        <div className="relative" ref={bellRef}>
+                            <button onClick={handleOpenBell}
+                                className="relative p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">
+                                <Bell className="w-4 h-4" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] bg-purple-500 rounded-full text-[9px] text-white flex items-center justify-center px-0.5 font-bold">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            {bellOpen && (
+                                <div className="absolute right-0 top-10 w-80 bg-black/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+                                    <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
+                                        <Bell className="w-4 h-4 text-purple-400" />
+                                        <p className="text-white text-sm font-semibold">Atualizações</p>
+                                    </div>
+                                    <div className="max-h-80 overflow-y-auto">
+                                        {updates.length === 0 ? (
+                                            <p className="text-gray-500 text-sm text-center py-6">Nenhuma atualização ainda.</p>
+                                        ) : (
+                                            <div className="divide-y divide-white/5">
+                                                {updates.map(u => (
+                                                    <div key={u.id} className="px-4 py-3 hover:bg-white/[0.03] transition-colors">
+                                                        <div className="flex items-start gap-2">
+                                                            <span className="text-base shrink-0">{UPDATE_TYPE_ICON[u.type] || '🔔'}</span>
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-medium text-white leading-tight">{u.title}</p>
+                                                                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{u.content}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* User menu */}
                         {user ? (
@@ -155,7 +236,7 @@ export function Header() {
             {menuOpen && (
                 <div className="fixed inset-0 z-40 bg-black/95 backdrop-blur-md flex flex-col pt-24 px-6 md:hidden">
                     <nav className="flex flex-col gap-2">
-                        {navLinks.map(l => (
+                        {activeNavLinks.map(l => (
                             <Link
                                 key={l.href}
                                 href={l.href}

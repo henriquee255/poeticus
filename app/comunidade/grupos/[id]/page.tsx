@@ -230,7 +230,13 @@ export default function GroupPage() {
 
     // Check membership from API (more reliable than localStorage)
     useEffect(() => {
-        if (!user) return
+        if (!user || !group) return
+        // Creator is always a member - skip API call
+        if (user.id === group.creator_id) {
+            setIsMember(true)
+            setMyRole('creator')
+            return
+        }
         fetch(`/api/groups/${id}/members`).then(r => r.json()).then(data => {
             if (Array.isArray(data)) {
                 setMembers(data)
@@ -246,7 +252,7 @@ export default function GroupPage() {
                 }
             }
         })
-    }, [id, user])
+    }, [id, user, group])
 
     useEffect(() => {
         if (!group) return

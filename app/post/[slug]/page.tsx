@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Clock, Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2, Bookmark } from "lucide-react"
+import {  Calendar, ChevronLeft, Type, Minus, Plus, Heart, Share2, Bookmark } from "lucide-react"
 import Link from "next/link"
 import { getPosts, likePost, unlikePost, sharePost, trackView } from "@/lib/storage"
 import { Button } from "@/components/ui/button"
@@ -232,10 +232,6 @@ export default function PostPage() {
                             <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
                                 {post.date}
-                            </span>
-                            <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {post.readTime}
                             </span>
                         </div>
                     </motion.div>

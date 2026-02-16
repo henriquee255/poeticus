@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { getAds, saveAds } from "@/lib/storage"
 import { Ad } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Plus, Trash2, Save, Layout, Info } from "lucide-react"
+import { Plus, Trash2, Save, Layout, Info, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const IMAGE_SPECS: Record<Ad['location'], { label: string; size: string; ratio: string }> = {
@@ -18,6 +18,19 @@ const LOCATION_OPTIONS: Ad['location'][] = ['header', 'sidebar', 'post-footer']
 export default function AdsPage() {
     const [ads, setAds] = useState<Ad[]>([])
     const [isSaving, setIsSaving] = useState(false)
+    const [uploadingFor, setUploadingFor] = useState<string | null>(null)
+    const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+    const handleImageUpload = async (adId: string, file: File) => {
+        setUploadingFor(adId)
+        const form = new FormData()
+        form.append('file', file)
+        form.append('user_id', 'admin')
+        const res = await fetch('/api/upload', { method: 'POST', body: form })
+        const data = await res.json()
+        if (data.url) updateAd(adId, 'imageUrl', data.url)
+        setUploadingFor(null)
+    }
 
     useEffect(() => {
         getAds().then(setAds).catch(console.error)
@@ -181,16 +194,39 @@ export default function AdsPage() {
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-500 uppercase mb-2">
-                                            URL da Imagem
+                                            Imagem
                                             <span className="ml-2 text-purple-400 font-mono normal-case">{spec.size}</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            value={ad.imageUrl || ''}
-                                            onChange={e => updateAd(ad.id, 'imageUrl', e.target.value)}
-                                            placeholder="https://exemplo.com/banner.jpg"
-                                            className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 font-mono"
-                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={ad.imageUrl || ''}
+                                                onChange={e => updateAd(ad.id, 'imageUrl', e.target.value)}
+                                                placeholder="https://exemplo.com/banner.jpg"
+                                                className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 font-mono"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRefs.current[ad.id]?.click()}
+                                                disabled={uploadingFor === ad.id}
+                                                className="flex items-center gap-1.5 px-3 py-2 bg-purple-900/30 border border-purple-500/30 text-purple-300 hover:bg-purple-900/50 disabled:opacity-50 text-xs rounded-lg transition-colors whitespace-nowrap"
+                                            >
+                                                <Upload className="w-3.5 h-3.5" />
+                                                {uploadingFor === ad.id ? 'Enviando...' : 'Upload'}
+                                            </button>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                ref={el => { fileInputRefs.current[ad.id] = el }}
+                                                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(ad.id, f) }}
+                                            />
+                                        </div>
+                                        {ad.imageUrl && (
+                                            <div className="mt-2 rounded-lg overflow-hidden border border-white/10 h-16">
+                                                <img src={ad.imageUrl} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-xs text-gray-500 uppercase mb-2">Link de Destino</label>

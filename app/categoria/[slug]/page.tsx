@@ -29,10 +29,9 @@ export default function CategoriaPage({ params }: { params: Promise<{ slug: stri
         const fetchPosts = async () => {
             try {
                 const data = await getPosts()
-                const filtered = data.filter(
-                    p => p.status === 'published' &&
-                    p.category.toLowerCase() === categoryName.toLowerCase()
-                )
+                const filtered = slug === 'todas'
+                    ? data.filter((p: any) => p.status === 'published')
+                    : data.filter((p: any) => p.status === 'published' && p.category?.toLowerCase() === categoryName.toLowerCase())
                 setPosts(filtered)
             } catch (error) {
                 console.error("Error fetching poems:", error)

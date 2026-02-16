@@ -2,9 +2,19 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Save, Instagram, Globe, Info, User } from "lucide-react"
+import { Save, Instagram, Globe, Info, User, Menu, Eye, EyeOff } from "lucide-react"
 import { getSettings, saveSettings } from "@/lib/storage"
-import { SiteSettings } from "@/types"
+import { SiteSettings, NavLink } from "@/types"
+
+const DEFAULT_NAV: NavLink[] = [
+    { label: "Amor", href: "/categoria/amor", enabled: true },
+    { label: "Reflexões", href: "/categoria/reflexoes", enabled: true },
+    { label: "Escritas Livres", href: "/escritas-livres", enabled: true },
+    { label: "Comunidade", href: "/comunidade", enabled: true },
+    { label: "Livros", href: "/livros", enabled: true },
+    { label: "Feedback", href: "/feedback", enabled: true },
+    { label: "Sobre", href: "/sobre", enabled: true },
+]
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState<SiteSettings | null>(null)
@@ -153,6 +163,40 @@ export default function SettingsPage() {
                             Visualizar página Sobre →
                         </a>
                     </div>
+                </div>
+
+                {/* Navegação */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Menu className="w-5 h-5 text-purple-400" />
+                        <h2 className="text-xl font-bold text-white">Navegação do Blog</h2>
+                    </div>
+                    <p className="text-sm text-gray-400 mb-4">Ative ou desative os itens que aparecem no menu do blog.</p>
+                    <div className="space-y-2">
+                        {(settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : DEFAULT_NAV).map((link, i) => {
+                            const navLinks = settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : DEFAULT_NAV
+                            return (
+                                <div key={link.href} className="flex items-center gap-3 p-3 bg-black/30 rounded-xl border border-white/5">
+                                    <span className="text-sm text-white flex-1">{link.label}</span>
+                                    <span className="text-xs text-gray-600 font-mono">{link.href}</span>
+                                    <button type="button"
+                                        onClick={() => {
+                                            const updated = navLinks.map((l, idx) => idx === i ? { ...l, enabled: !l.enabled } : l)
+                                            setSettings({ ...settings, navLinks: updated })
+                                        }}
+                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border transition-all ${link.enabled ? 'bg-green-900/20 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                                        {link.enabled ? <><Eye className="w-3 h-3" /> Visível</> : <><EyeOff className="w-3 h-3" /> Oculto</>}
+                                    </button>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    {(!settings.navLinks || settings.navLinks.length === 0) && (
+                        <button type="button" onClick={() => setSettings({ ...settings, navLinks: DEFAULT_NAV })}
+                            className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                            Carregar links padrão
+                        </button>
+                    )}
                 </div>
 
                 {/* Dica */}
