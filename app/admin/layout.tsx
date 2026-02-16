@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, PenTool, FileText, Settings, LogOut, BookOpen, Users, Menu, X, MessageSquare, PenLine, MessageCircle } from "lucide-react"
+import { LayoutDashboard, PenTool, FileText, Settings, LogOut, BookOpen, Users, Menu, X, MessageSquare, PenLine, MessageCircle, Users2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { isAuthenticated, logout } from "@/lib/storage"
 import { useEffect, useState } from "react"
@@ -47,6 +47,7 @@ export default function AdminLayout({
         { name: "Usuários", href: "/admin/usuarios", icon: Users },
         { name: "Comentários", href: "/admin/comentarios", icon: MessageSquare },
         { name: "Escritas Livres", href: "/admin/escritas", icon: PenLine },
+        { name: "Grupos", href: "/admin/grupos", icon: Users2 },
         { name: "Feedback", href: "/admin/feedback", icon: MessageCircle },
         { name: "Configurações", href: "/admin/settings", icon: Settings },
     ]

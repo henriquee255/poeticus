@@ -58,9 +58,9 @@ export default function NovaEscritaPage() {
     useEffect(() => {
         fetch('/api/categories').then(r => r.json()).then(data => {
             if (Array.isArray(data) && data.length > 0) {
-                const cats = data.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean)
-                // Merge with defaults, keep unique
-                const merged = [...new Set([...cats, ...DEFAULT_CATEGORIES])]
+                const cats = data.map((c: any) => (typeof c === 'string' ? c : c.name)?.toLowerCase().trim()).filter(Boolean)
+                // Merge with defaults, keep unique (case-insensitive)
+                const merged = [...new Set([...DEFAULT_CATEGORIES.map(c => c.toLowerCase()), ...cats])]
                 setCategories(merged)
             }
         }).catch(() => {})

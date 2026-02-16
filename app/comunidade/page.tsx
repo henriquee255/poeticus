@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
     Heart, MessageCircle, Trash2, Send, User, ChevronDown, ChevronUp,
     Image as ImageIcon, Smile, X, Users, Plus, Hash, Globe, Search,
-    ChevronRight, Sparkles
+    ChevronRight, Sparkles, Lock, Unlock, Upload, Crown, Shield
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -38,6 +38,9 @@ interface Group {
     description?: string
     member_count: number
     creator_id: string
+    image_url?: string
+    cover_url?: string
+    is_private?: boolean
     created_at: string
 }
 
@@ -61,11 +64,14 @@ interface FeedPost {
     feed_groups?: { name: string }
 }
 
-function Avatar({ url, size = 10 }: { url?: string; size?: number }) {
+function GroupAvatar({ group, size = 9 }: { group: Group; size?: number }) {
     const s = `w-${size} h-${size}`
     return (
-        <div className={`${s} rounded-full bg-purple-900/40 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0`}>
-            {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-purple-400" />}
+        <div className={`${s} rounded-xl bg-gradient-to-br from-purple-900/60 to-indigo-900/60 border border-purple-500/20 overflow-hidden flex items-center justify-center shrink-0`}>
+            {group.image_url
+                ? <img src={group.image_url} alt="" className="w-full h-full object-cover" />
+                : <Hash className="w-4 h-4 text-purple-400" />
+            }
         </div>
     )
 }
@@ -130,7 +136,9 @@ function PostCard({ post, currentUserId, currentProfile, onDelete }: {
             className="bg-zinc-900/80 border border-white/[0.07] rounded-2xl overflow-hidden hover:border-white/15 transition-all">
             <div className="p-4 sm:p-5">
                 <div className="flex gap-3">
-                    <Avatar url={post.profiles?.avatar_url} size={10} />
+                    <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0">
+                        {post.profiles?.avatar_url ? <img src={post.profiles.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-purple-400" />}
+                    </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-1.5">
                             <div>
@@ -214,29 +222,131 @@ function PostCard({ post, currentUserId, currentProfile, onDelete }: {
     )
 }
 
-function GroupCard({ group, isMember, onToggle, userId }: {
-    group: Group; isMember: boolean; onToggle: (id: string, currentMember: boolean) => void; userId?: string
+// Advanced group creation form
+function CreateGroupForm({ userId, onCreated, onCancel }: {
+    userId: string; onCreated: (g: Group) => void; onCancel: () => void
 }) {
+    const [name, setName] = useState('')
+    const [desc, setDesc] = useState('')
+    const [isPrivate, setIsPrivate] = useState(false)
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [coverFile, setCoverFile] = useState<File | null>(null)
+    const [imagePreview, setImagePreview] = useState('')
+    const [coverPreview, setCoverPreview] = useState('')
+    const [creating, setCreating] = useState(false)
+    const imgRef = useRef<HTMLInputElement>(null)
+    const coverRef = useRef<HTMLInputElement>(null)
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'cover') => {
+        const file = e.target.files?.[0]; if (!file) return
+        const reader = new FileReader()
+        reader.onload = () => {
+            if (type === 'image') { setImageFile(file); setImagePreview(reader.result as string) }
+            else { setCoverFile(file); setCoverPreview(reader.result as string) }
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!name.trim()) return
+        setCreating(true)
+
+        let image_url = ''
+        let cover_url = ''
+
+        // Upload images (group_id is not known yet, use temp name)
+        const tempId = Date.now().toString()
+        if (imageFile) {
+            const form = new FormData()
+            form.append('file', imageFile); form.append('group_id', tempId); form.append('type', 'image')
+            const r = await fetch('/api/upload/group', { method: 'POST', body: form })
+            const d = await r.json()
+            if (d.url) image_url = d.url
+        }
+        if (coverFile) {
+            const form = new FormData()
+            form.append('file', coverFile); form.append('group_id', tempId + '_cover'); form.append('type', 'cover')
+            const r = await fetch('/api/upload/group', { method: 'POST', body: form })
+            const d = await r.json()
+            if (d.url) cover_url = d.url
+        }
+
+        const res = await fetch('/api/groups', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim(), description: desc.trim(), creator_id: userId, image_url: image_url || undefined, cover_url: cover_url || undefined, is_private: isPrivate })
+        })
+        const data = await res.json()
+        if (data.id) onCreated(data)
+        setCreating(false)
+    }
+
     return (
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group cursor-pointer">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-900/60 to-indigo-900/60 border border-purple-500/20 flex items-center justify-center shrink-0">
-                <Hash className="w-4 h-4 text-purple-400" />
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            {/* Cover image */}
+            <div>
+                <label className="block text-xs text-gray-500 uppercase tracking-wider mb-2">Imagem de capa</label>
+                <div
+                    onClick={() => coverRef.current?.click()}
+                    className="relative w-full h-24 rounded-xl border border-dashed border-white/10 overflow-hidden cursor-pointer hover:border-purple-500/30 transition-colors bg-white/[0.02]">
+                    {coverPreview
+                        ? <img src={coverPreview} alt="" className="w-full h-full object-cover" />
+                        : <div className="flex flex-col items-center justify-center h-full gap-1">
+                            <Upload className="w-5 h-5 text-gray-600" />
+                            <span className="text-xs text-gray-600">Capa do grupo</span>
+                        </div>
+                    }
+                    <input ref={coverRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'cover')} className="hidden" />
+                </div>
             </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-200 truncate">{group.name}</p>
-                <p className="text-[11px] text-gray-600">{group.member_count} {group.member_count === 1 ? 'membro' : 'membros'}</p>
+
+            {/* Avatar image */}
+            <div className="flex items-center gap-3">
+                <div onClick={() => imgRef.current?.click()}
+                    className="w-16 h-16 rounded-2xl border border-dashed border-white/10 overflow-hidden cursor-pointer hover:border-purple-500/30 transition-colors bg-white/[0.02] flex items-center justify-center shrink-0">
+                    {imagePreview
+                        ? <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+                        : <div className="flex flex-col items-center gap-0.5">
+                            <Hash className="w-5 h-5 text-gray-600" />
+                            <span className="text-[10px] text-gray-700">Ícone</span>
+                        </div>
+                    }
+                    <input ref={imgRef} type="file" accept="image/*" onChange={e => handleFileChange(e, 'image')} className="hidden" />
+                </div>
+                <div className="flex-1 space-y-2">
+                    <input value={name} onChange={e => setName(e.target.value)}
+                        placeholder="Nome do grupo" maxLength={40} required
+                        className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
+                    <input value={desc} onChange={e => setDesc(e.target.value)}
+                        placeholder="Descrição (opcional)" maxLength={120}
+                        className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
+                </div>
             </div>
-            {userId && (
-                <button
-                    onClick={() => onToggle(group.id, isMember)}
-                    className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all shrink-0 ${isMember
-                        ? 'bg-purple-900/30 border-purple-500/30 text-purple-300 hover:bg-red-900/20 hover:border-red-500/20 hover:text-red-400'
-                        : 'border-white/10 text-gray-500 hover:border-purple-500/30 hover:text-purple-300'
-                    }`}>
-                    {isMember ? 'Sair' : 'Entrar'}
+
+            {/* Privacy toggle */}
+            <button type="button" onClick={() => setIsPrivate(p => !p)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${isPrivate ? 'bg-amber-900/20 border-amber-500/30 text-amber-300' : 'border-white/10 text-gray-400 hover:border-white/20'}`}>
+                {isPrivate ? <Lock className="w-4 h-4 shrink-0" /> : <Unlock className="w-4 h-4 shrink-0" />}
+                <div className="text-left flex-1">
+                    <p className="text-sm font-medium">{isPrivate ? 'Grupo fechado' : 'Grupo aberto'}</p>
+                    <p className="text-xs opacity-60">{isPrivate ? 'Entrada por aprovação do criador' : 'Qualquer um pode entrar'}</p>
+                </div>
+                <div className={`w-9 h-5 rounded-full transition-all ${isPrivate ? 'bg-amber-500' : 'bg-white/10'} relative shrink-0`}>
+                    <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all ${isPrivate ? 'left-4' : 'left-0.5'}`} />
+                </div>
+            </button>
+
+            <div className="flex gap-2">
+                <button type="submit" disabled={!name.trim() || creating}
+                    className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+                    {creating ? 'Criando...' : 'Criar grupo'}
                 </button>
-            )}
-        </div>
+                <button type="button" onClick={onCancel}
+                    className="px-4 py-2.5 border border-white/10 text-gray-400 text-sm rounded-xl hover:text-white transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </form>
     )
 }
 
@@ -253,15 +363,12 @@ export default function ComunidadePage() {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // Groups
     const [groups, setGroups] = useState<Group[]>([])
     const [activeGroup, setActiveGroup] = useState<Group | null>(null)
     const [memberOf, setMemberOf] = useState<Set<string>>(new Set())
+    const [requestedOf, setRequestedOf] = useState<Set<string>>(new Set())
     const [groupSearch, setGroupSearch] = useState('')
     const [showCreateGroup, setShowCreateGroup] = useState(false)
-    const [newGroupName, setNewGroupName] = useState('')
-    const [newGroupDesc, setNewGroupDesc] = useState('')
-    const [creatingGroup, setCreatingGroup] = useState(false)
     const [postInGroup, setPostInGroup] = useState(false)
 
     const loadFeed = (groupId?: string | null) => {
@@ -279,14 +386,17 @@ export default function ComunidadePage() {
                 setGroups(data)
                 if (user) {
                     const joined = new Set<string>(
-                        data.filter((g: Group) => {
-                            const stored = typeof window !== 'undefined'
-                                ? localStorage.getItem(`group_member_${g.id}_${user.id}`)
-                                : null
-                            return stored === 'true'
-                        }).map((g: Group) => g.id)
+                        data.filter((g: Group) =>
+                            typeof window !== 'undefined' && localStorage.getItem(`group_member_${g.id}_${user.id}`) === 'true'
+                        ).map((g: Group) => g.id)
+                    )
+                    const requested = new Set<string>(
+                        data.filter((g: Group) =>
+                            typeof window !== 'undefined' && localStorage.getItem(`group_requested_${g.id}_${user.id}`) === 'true'
+                        ).map((g: Group) => g.id)
                     )
                     setMemberOf(joined)
+                    setRequestedOf(requested)
                 }
             }
         })
@@ -297,44 +407,48 @@ export default function ComunidadePage() {
     const handleSelectGroup = (g: Group | null) => {
         setActiveGroup(g)
         loadFeed(g?.id)
-        if (g) setPostInGroup(true)
-        else setPostInGroup(false)
+        setPostInGroup(!!g)
     }
 
-    const handleToggleMember = async (groupId: string, isMember: boolean) => {
+    const handleToggleMember = async (groupId: string, group: Group) => {
         if (!user) return
-        const res = await fetch(`/api/groups/${groupId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: user.id })
-        })
-        const data = await res.json()
-        if (data.member !== undefined) {
-            const next = new Set(memberOf)
-            if (data.member) next.add(groupId); else next.delete(groupId)
-            setMemberOf(next)
-            localStorage.setItem(`group_member_${groupId}_${user.id}`, data.member ? 'true' : 'false')
+        const isMember = memberOf.has(groupId)
+        if (isMember) {
+            // Leave
+            const res = await fetch(`/api/groups/${groupId}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id })
+            })
+            const data = await res.json()
+            const next = new Set(memberOf); next.delete(groupId); setMemberOf(next)
+            localStorage.setItem(`group_member_${groupId}_${user.id}`, 'false')
             setGroups(prev => prev.map(g => g.id === groupId ? { ...g, member_count: data.member_count } : g))
+        } else if (requestedOf.has(groupId)) {
+            // Already requested — do nothing (show status)
+            return
+        } else {
+            // Join or request
+            const res = await fetch(`/api/groups/${groupId}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id })
+            })
+            const data = await res.json()
+            if (data.requested) {
+                const next = new Set(requestedOf); next.add(groupId); setRequestedOf(next)
+                localStorage.setItem(`group_requested_${groupId}_${user.id}`, 'true')
+            } else if (data.member) {
+                const next = new Set(memberOf); next.add(groupId); setMemberOf(next)
+                localStorage.setItem(`group_member_${groupId}_${user.id}`, 'true')
+                setGroups(prev => prev.map(g => g.id === groupId ? { ...g, member_count: data.member_count } : g))
+            }
         }
     }
 
-    const handleCreateGroup = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!newGroupName.trim() || !user) return
-        setCreatingGroup(true)
-        const res = await fetch('/api/groups', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newGroupName.trim(), description: newGroupDesc.trim(), creator_id: user.id })
-        })
-        const data = await res.json()
-        if (data.id) {
-            setGroups(prev => [data, ...prev])
-            const next = new Set(memberOf); next.add(data.id); setMemberOf(next)
-            localStorage.setItem(`group_member_${data.id}_${user.id}`, 'true')
-            setNewGroupName(''); setNewGroupDesc(''); setShowCreateGroup(false)
-        }
-        setCreatingGroup(false)
+    const handleGroupCreated = (g: Group) => {
+        setGroups(prev => [g, ...prev])
+        const next = new Set(memberOf); next.add(g.id); setMemberOf(next)
+        localStorage.setItem(`group_member_${g.id}_${user!.id}`, 'true')
+        setShowCreateGroup(false)
     }
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -387,54 +501,60 @@ export default function ComunidadePage() {
         groupSearch ? g.name.toLowerCase().includes(groupSearch.toLowerCase()) : true
     )
 
+    const renderJoinButton = (g: Group, compact = false) => {
+        const isMember = memberOf.has(g.id)
+        const isRequested = requestedOf.has(g.id)
+        if (isMember) return (
+            <button onClick={ev => { ev.stopPropagation(); handleToggleMember(g.id, g) }}
+                className={`text-[10px] px-2 py-1 rounded-lg border transition-all shrink-0 bg-purple-900/30 border-purple-500/30 text-purple-300 hover:bg-red-900/20 hover:border-red-500/20 hover:text-red-400`}>
+                Sair
+            </button>
+        )
+        if (isRequested) return (
+            <span className="text-[10px] px-2 py-1 rounded-lg border border-amber-500/20 text-amber-400/70 shrink-0 flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" /> Pendente
+            </span>
+        )
+        return (
+            <button onClick={ev => { ev.stopPropagation(); handleToggleMember(g.id, g) }}
+                className="text-[10px] px-2 py-1 rounded-lg border transition-all shrink-0 border-white/10 text-gray-600 hover:border-purple-500/30 hover:text-purple-300">
+                {g.is_private ? <span className="flex items-center gap-1"><Lock className="w-2.5 h-2.5" />Pedir</span> : 'Entrar'}
+            </button>
+        )
+    }
+
     return (
         <div className="min-h-screen bg-black">
             {/* Mobile groups strip */}
             <div className="lg:hidden border-b border-white/5 bg-zinc-950/80 sticky top-0 z-30 backdrop-blur-md">
                 <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
-                    <button
-                        onClick={() => handleSelectGroup(null)}
+                    <button onClick={() => handleSelectGroup(null)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${!activeGroup ? 'bg-purple-600 border-purple-500 text-white' : 'border-white/10 text-gray-400 hover:border-white/20'}`}>
                         <Globe className="w-3.5 h-3.5" /> Feed global
                     </button>
                     {groups.map(g => (
-                        <button key={g.id}
-                            onClick={() => handleSelectGroup(g)}
+                        <button key={g.id} onClick={() => handleSelectGroup(g)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${activeGroup?.id === g.id ? 'bg-purple-600 border-purple-500 text-white' : 'border-white/10 text-gray-400 hover:border-white/20'}`}>
-                            <Hash className="w-3 h-3" />{g.name}
+                            {g.image_url
+                                ? <img src={g.image_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                : <Hash className="w-3 h-3" />
+                            }
+                            {g.name}
+                            {g.is_private && <Lock className="w-2.5 h-2.5 opacity-60" />}
                         </button>
                     ))}
                     {user && (
-                        <button
-                            onClick={() => setShowCreateGroup(p => !p)}
+                        <button onClick={() => setShowCreateGroup(p => !p)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 border border-dashed border-white/20 text-gray-500 hover:border-purple-500/40 hover:text-purple-400 transition-all">
                             <Plus className="w-3 h-3" /> Criar grupo
                         </button>
                     )}
                 </div>
-                {/* Mobile create group */}
                 <AnimatePresence>
                     {showCreateGroup && (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                             className="border-t border-white/5 overflow-hidden">
-                            <form onSubmit={handleCreateGroup} className="p-4 space-y-2">
-                                <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
-                                    placeholder="Nome do grupo" maxLength={40}
-                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
-                                <input value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)}
-                                    placeholder="Descrição (opcional)" maxLength={100}
-                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
-                                <div className="flex gap-2">
-                                    <button type="submit" disabled={!newGroupName.trim() || creatingGroup}
-                                        className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm rounded-xl transition-colors">
-                                        {creatingGroup ? 'Criando...' : 'Criar grupo'}
-                                    </button>
-                                    <button type="button" onClick={() => setShowCreateGroup(false)}
-                                        className="px-4 py-2 border border-white/10 text-gray-400 text-sm rounded-xl hover:text-white transition-colors">
-                                        Cancelar
-                                    </button>
-                                </div>
-                            </form>
+                            <CreateGroupForm userId={user!.id} onCreated={handleGroupCreated} onCancel={() => setShowCreateGroup(false)} />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -445,26 +565,23 @@ export default function ComunidadePage() {
                     {/* Left sidebar — desktop */}
                     <aside className="hidden lg:flex flex-col w-72 shrink-0">
                         <div className="sticky top-8 space-y-4">
-                            {/* Header */}
                             <div>
                                 <h1 className="text-2xl font-bold text-white font-serif mb-1">Comunidade</h1>
                                 <p className="text-gray-600 text-sm">Compartilhe pensamentos e reflexões</p>
                             </div>
 
-                            {/* Feed global button */}
-                            <button
-                                onClick={() => handleSelectGroup(null)}
+                            <button onClick={() => handleSelectGroup(null)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${!activeGroup ? 'bg-purple-600/20 border-purple-500/30 text-purple-300' : 'border-white/5 text-gray-400 hover:border-white/10 hover:text-white'}`}>
                                 <Globe className="w-4 h-4 shrink-0" />
                                 <span className="text-sm font-medium">Feed global</span>
                             </button>
 
-                            {/* Groups section */}
                             <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden">
                                 <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Users className="w-4 h-4 text-purple-400" />
                                         <span className="text-sm font-semibold text-white">Grupos</span>
+                                        <span className="text-xs text-gray-600">({groups.length})</span>
                                     </div>
                                     {user && (
                                         <button onClick={() => setShowCreateGroup(p => !p)}
@@ -474,34 +591,15 @@ export default function ComunidadePage() {
                                     )}
                                 </div>
 
-                                {/* Create group form */}
                                 <AnimatePresence>
                                     {showCreateGroup && (
                                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                                             className="border-b border-white/5 overflow-hidden">
-                                            <form onSubmit={handleCreateGroup} className="p-4 space-y-2">
-                                                <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
-                                                    placeholder="Nome do grupo" maxLength={40}
-                                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
-                                                <input value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)}
-                                                    placeholder="Descrição (opcional)" maxLength={100}
-                                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
-                                                <div className="flex gap-2">
-                                                    <button type="submit" disabled={!newGroupName.trim() || creatingGroup}
-                                                        className="flex-1 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs rounded-lg transition-colors">
-                                                        {creatingGroup ? 'Criando...' : 'Criar'}
-                                                    </button>
-                                                    <button type="button" onClick={() => setShowCreateGroup(false)}
-                                                        className="px-3 py-1.5 border border-white/10 text-gray-500 text-xs rounded-lg hover:text-white transition-colors">
-                                                        Cancelar
-                                                    </button>
-                                                </div>
-                                            </form>
+                                            <CreateGroupForm userId={user!.id} onCreated={handleGroupCreated} onCancel={() => setShowCreateGroup(false)} />
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
 
-                                {/* Search */}
                                 <div className="px-3 pt-3 pb-1">
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
@@ -511,37 +609,28 @@ export default function ComunidadePage() {
                                     </div>
                                 </div>
 
-                                {/* Group list */}
-                                <div className="p-2 max-h-80 overflow-y-auto">
+                                <div className="p-2 max-h-96 overflow-y-auto">
                                     {filteredGroups.length === 0 && (
                                         <p className="text-xs text-gray-600 text-center py-4">Nenhum grupo ainda</p>
                                     )}
                                     {filteredGroups.map(g => (
-                                        <div key={g.id} onClick={() => handleSelectGroup(g)}
-                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer ${activeGroup?.id === g.id ? 'bg-purple-900/20' : ''}`}>
-                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-900/60 to-indigo-900/60 border border-purple-500/20 flex items-center justify-center shrink-0">
-                                                <Hash className="w-4 h-4 text-purple-400" />
-                                            </div>
+                                        <Link key={g.id} href={`/comunidade/grupos/${g.id}`}
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors ${activeGroup?.id === g.id ? 'bg-purple-900/20' : ''}`}
+                                            onClick={ev => { ev.preventDefault(); handleSelectGroup(g) }}>
+                                            <GroupAvatar group={g} size={9} />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-200 truncate">{g.name}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="text-sm font-medium text-gray-200 truncate">{g.name}</p>
+                                                    {g.is_private && <Lock className="w-3 h-3 text-amber-500/60 shrink-0" />}
+                                                </div>
                                                 <p className="text-[11px] text-gray-600">{g.member_count} {g.member_count === 1 ? 'membro' : 'membros'}</p>
                                             </div>
-                                            {user && (
-                                                <button
-                                                    onClick={ev => { ev.stopPropagation(); handleToggleMember(g.id, memberOf.has(g.id)) }}
-                                                    className={`text-[10px] px-2 py-1 rounded-lg border transition-all shrink-0 ${memberOf.has(g.id)
-                                                        ? 'bg-purple-900/30 border-purple-500/30 text-purple-300 hover:bg-red-900/20 hover:border-red-500/20 hover:text-red-400'
-                                                        : 'border-white/10 text-gray-600 hover:border-purple-500/30 hover:text-purple-300'
-                                                    }`}>
-                                                    {memberOf.has(g.id) ? 'Sair' : 'Entrar'}
-                                                </button>
-                                            )}
-                                        </div>
+                                            {user && renderJoinButton(g)}
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Invite / info card */}
                             <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/10 rounded-2xl p-4">
                                 <Sparkles className="w-5 h-5 text-purple-400 mb-2" />
                                 <p className="text-sm font-medium text-white mb-1">Novo por aqui?</p>
@@ -557,33 +646,47 @@ export default function ComunidadePage() {
 
                     {/* Main feed */}
                     <main className="flex-1 min-w-0 space-y-4">
-                        {/* Active group banner */}
                         <AnimatePresence>
                             {activeGroup && (
                                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                                    className="bg-purple-900/20 border border-purple-500/20 rounded-2xl px-5 py-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/30 to-indigo-600/30 border border-purple-500/30 flex items-center justify-center">
-                                            <Hash className="w-5 h-5 text-purple-300" />
+                                    className="rounded-2xl overflow-hidden border border-white/10">
+                                    {activeGroup.cover_url && (
+                                        <div className="w-full h-28 overflow-hidden">
+                                            <img src={activeGroup.cover_url} alt="" className="w-full h-full object-cover" />
                                         </div>
-                                        <div>
-                                            <h2 className="font-bold text-white text-lg leading-none">{activeGroup.name}</h2>
-                                            {activeGroup.description && <p className="text-xs text-purple-300/70 mt-0.5">{activeGroup.description}</p>}
-                                            <p className="text-xs text-purple-400/60 mt-0.5">{activeGroup.member_count} membros</p>
+                                    )}
+                                    <div className={`px-5 py-4 flex items-center justify-between ${activeGroup.cover_url ? 'bg-black/70 backdrop-blur-sm' : 'bg-purple-900/20'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <GroupAvatar group={activeGroup} size={10} />
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h2 className="font-bold text-white text-lg leading-none">{activeGroup.name}</h2>
+                                                    {activeGroup.is_private && <Lock className="w-3.5 h-3.5 text-amber-400/70" />}
+                                                </div>
+                                                {activeGroup.description && <p className="text-xs text-gray-400 mt-0.5">{activeGroup.description}</p>}
+                                                <p className="text-xs text-purple-400/60 mt-0.5">{activeGroup.member_count} membros</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Link href={`/comunidade/grupos/${activeGroup.id}`}
+                                                className="text-xs px-3 py-1.5 border border-white/10 text-gray-400 hover:text-white rounded-xl transition-colors">
+                                                Ver grupo
+                                            </Link>
+                                            <button onClick={() => handleSelectGroup(null)} className="text-gray-500 hover:text-white p-1 transition-colors">
+                                                <X className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleSelectGroup(null)} className="text-purple-400/60 hover:text-purple-300 transition-colors p-1">
-                                        <X className="w-4 h-4" />
-                                    </button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
-                        {/* Composer */}
                         {user ? (
                             <div className="bg-zinc-900/80 border border-white/[0.07] rounded-2xl p-5">
                                 <div className="flex gap-3">
-                                    <Avatar url={profile?.avatar_url} size={10} />
+                                    <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0">
+                                        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-purple-400" />}
+                                    </div>
                                     <div className="flex-1">
                                         <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
                                             placeholder={activeGroup && postInGroup ? `Publicar em #${activeGroup.name}...` : 'O que você está pensando?'}
@@ -601,13 +704,13 @@ export default function ComunidadePage() {
                                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5 flex-wrap gap-2">
                                             <div className="flex items-center gap-1 relative">
                                                 <button type="button" onClick={() => fileInputRef.current?.click()}
-                                                    className="p-2 text-gray-500 hover:text-purple-400 hover:bg-purple-900/20 rounded-lg transition-colors" title="Adicionar foto">
+                                                    className="p-2 text-gray-500 hover:text-purple-400 hover:bg-purple-900/20 rounded-lg transition-colors">
                                                     <ImageIcon className="w-4 h-4" />
                                                 </button>
                                                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                                 <div className="relative">
                                                     <button type="button" onClick={() => setShowEmoji(p => !p)}
-                                                        className="p-2 text-gray-500 hover:text-yellow-400 hover:bg-yellow-900/20 rounded-lg transition-colors" title="Emojis">
+                                                        className="p-2 text-gray-500 hover:text-yellow-400 hover:bg-yellow-900/20 rounded-lg transition-colors">
                                                         <Smile className="w-4 h-4" />
                                                     </button>
                                                     {showEmoji && <EmojiPicker onPick={e => { setText(p => p + e); setShowEmoji(false); textareaRef.current?.focus() }} onClose={() => setShowEmoji(false)} />}
@@ -641,7 +744,6 @@ export default function ComunidadePage() {
                             </div>
                         )}
 
-                        {/* Feed */}
                         {loading && (
                             <div className="space-y-3">
                                 {[1,2,3].map(i => (
