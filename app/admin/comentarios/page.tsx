@@ -19,6 +19,7 @@ interface Comment {
 
 export default function ComentariosPage() {
     const [comments, setComments] = useState<Comment[]>([])
+    const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
     const [loading, setLoading] = useState(true)
     const [toast, setToast] = useState("")
 
@@ -40,13 +41,19 @@ export default function ComentariosPage() {
     }
 
     const handleLike = async (comment: Comment) => {
-        const newLikes = (comment.likes || 0) + 1
+        const isLiked = likedIds.has(comment.id)
+        const newLikes = Math.max(0, (comment.likes || 0) + (isLiked ? -1 : 1))
         await fetch('/api/comments', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: comment.id, likes: newLikes })
         })
         setComments(prev => prev.map(c => c.id === comment.id ? { ...c, likes: newLikes } : c))
+        setLikedIds(prev => {
+            const next = new Set(prev)
+            if (isLiked) next.delete(comment.id); else next.add(comment.id)
+            return next
+        })
     }
 
     return (
@@ -111,10 +118,10 @@ export default function ComentariosPage() {
                         <div className="flex items-start gap-3 shrink-0">
                             <button
                                 onClick={() => handleLike(c)}
-                                className="flex items-center gap-1.5 text-gray-500 hover:text-red-400 transition-colors text-xs"
-                                title="Curtir"
+                                className={`flex items-center gap-1.5 transition-colors text-xs ${likedIds.has(c.id) ? 'text-red-400' : 'text-gray-500 hover:text-red-400'}`}
+                                title={likedIds.has(c.id) ? 'Descurtir' : 'Curtir'}
                             >
-                                <Heart className="w-4 h-4" />
+                                <Heart className={`w-4 h-4 ${likedIds.has(c.id) ? 'fill-red-400' : ''}`} />
                                 <span>{c.likes || 0}</span>
                             </button>
                             <button
