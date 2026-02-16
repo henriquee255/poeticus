@@ -13,7 +13,7 @@ export async function GET(request: Request) {
             ? statusParam
             : (admin || user_id) ? undefined : 'published'
 
-        let q = supabase.from('escritas_livres').select('*,profiles(username,avatar_url)')
+        let q = supabase.from('escritas_livres').select('*')
 
         if (status) q = q.eq('status', status)
         if (category) q = q.eq('category', category)
@@ -25,7 +25,17 @@ export async function GET(request: Request) {
 
         const { data, error } = await q
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-        return NextResponse.json(data || [])
+        const rows = data || []
+
+        // Batch-fetch profiles
+        const userIds = [...new Set(rows.map((r: any) => r.user_id).filter(Boolean))]
+        let profileMap: Record<string, any> = {}
+        if (userIds.length > 0) {
+            const { data: profiles } = await supabase.from('profiles').select('id,username,avatar_url').in('id', userIds)
+            if (profiles) profiles.forEach((p: any) => { profileMap[p.id] = p })
+        }
+        const result = rows.map((r: any) => ({ ...r, profiles: profileMap[r.user_id] || null }))
+        return NextResponse.json(result)
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })
     }
