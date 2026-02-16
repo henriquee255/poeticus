@@ -380,19 +380,19 @@ export default function ComunidadePage() {
         })
     }
 
-    const loadGroups = () => {
+    const loadGroups = (currentUser = user) => {
         fetch('/api/groups').then(r => r.json()).then(data => {
             if (Array.isArray(data)) {
                 setGroups(data)
-                if (user) {
+                if (currentUser) {
                     const joined = new Set<string>(
                         data.filter((g: Group) =>
-                            typeof window !== 'undefined' && localStorage.getItem(`group_member_${g.id}_${user.id}`) === 'true'
+                            typeof window !== 'undefined' && localStorage.getItem(`group_member_${g.id}_${currentUser.id}`) === 'true'
                         ).map((g: Group) => g.id)
                     )
                     const requested = new Set<string>(
                         data.filter((g: Group) =>
-                            typeof window !== 'undefined' && localStorage.getItem(`group_requested_${g.id}_${user.id}`) === 'true'
+                            typeof window !== 'undefined' && localStorage.getItem(`group_requested_${g.id}_${currentUser.id}`) === 'true'
                         ).map((g: Group) => g.id)
                     )
                     setMemberOf(joined)
@@ -402,7 +402,8 @@ export default function ComunidadePage() {
         })
     }
 
-    useEffect(() => { loadFeed(); loadGroups() }, [])
+    useEffect(() => { loadFeed() }, [])
+    useEffect(() => { loadGroups(user) }, [user])
 
     const handleSelectGroup = (g: Group | null) => {
         setActiveGroup(g)

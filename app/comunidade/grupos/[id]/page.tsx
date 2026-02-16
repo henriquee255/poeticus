@@ -182,6 +182,7 @@ export default function GroupPage() {
     const { user, profile } = useAuth()
     const [tab, setTab] = useState<Tab>('feed')
     const [group, setGroup] = useState<Group | null>(null)
+    const [groupError, setGroupError] = useState(false)
     const [myRole, setMyRole] = useState<string | null>(null)
     const [isMember, setIsMember] = useState(false)
     const [isRequested, setIsRequested] = useState(false)
@@ -210,23 +211,40 @@ export default function GroupPage() {
 
     const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
+    // Load group data
     useEffect(() => {
         fetch(`/api/groups/${id}`).then(r => r.json()).then(data => {
-            if (data.id) {
+            if (data?.id) {
                 setGroup(data)
                 setEditName(data.name)
                 setEditDesc(data.description || '')
                 setEditPrivate(data.is_private || false)
                 setEditImagePreview(data.image_url || '')
                 setEditCoverPreview(data.cover_url || '')
+            } else {
+                setGroupError(true)
+            }
+        }).catch(() => setGroupError(true))
+    }, [id])
+
+    // Check membership from API (more reliable than localStorage)
+    useEffect(() => {
+        if (!user) return
+        fetch(`/api/groups/${id}/members`).then(r => r.json()).then(data => {
+            if (Array.isArray(data)) {
+                setMembers(data)
+                const me = data.find((m: Member) => m.user_id === user.id)
+                if (me) {
+                    setIsMember(true)
+                    setMyRole(me.role)
+                    localStorage.setItem(`group_member_${id}_${user.id}`, 'true')
+                } else {
+                    // Check if requested
+                    const requested = localStorage.getItem(`group_requested_${id}_${user.id}`) === 'true'
+                    setIsRequested(requested)
+                }
             }
         })
-        // Check membership from localStorage
-        if (user) {
-            const m = typeof window !== 'undefined' ? localStorage.getItem(`group_member_${id}_${user.id}`) === 'true' : false
-            const r = typeof window !== 'undefined' ? localStorage.getItem(`group_requested_${id}_${user.id}`) === 'true' : false
-            setIsMember(m); setIsRequested(r)
-        }
     }, [id, user])
 
     useEffect(() => {
@@ -240,15 +258,9 @@ export default function GroupPage() {
     }, [group, id])
 
     useEffect(() => {
-        if (tab === 'members') {
+        if (tab === 'members' && members.length === 0) {
             fetch(`/api/groups/${id}/members`).then(r => r.json()).then(data => {
-                if (Array.isArray(data)) {
-                    setMembers(data)
-                    if (user) {
-                        const me = data.find((m: Member) => m.user_id === user.id)
-                        if (me) { setMyRole(me.role); setIsMember(true) }
-                    }
-                }
+                if (Array.isArray(data)) setMembers(data)
             })
         }
         if (tab === 'settings' && (myRole === 'creator' || myRole === 'moderator')) {
@@ -409,9 +421,17 @@ export default function GroupPage() {
 
     const canManage = myRole === 'creator' || myRole === 'moderator'
 
+    if (groupError) return (
+        <div className="min-h-screen bg-black flex items-center justify-center flex-col gap-4 px-4">
+            <Hash className="w-10 h-10 text-gray-700" />
+            <p className="text-gray-500 text-sm">Grupo não encontrado.</p>
+            <Link href="/comunidade" className="text-purple-400 hover:text-purple-300 text-sm transition-colors">← Voltar à comunidade</Link>
+        </div>
+    )
+
     if (!group) return (
         <div className="min-h-screen bg-black flex items-center justify-center">
-            <div className="text-gray-600 text-sm">Carregando...</div>
+            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
         </div>
     )
 

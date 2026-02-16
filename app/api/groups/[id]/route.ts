@@ -7,11 +7,11 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const res = await fetch(
-        `${SUPA_URL}/rest/v1/feed_groups?id=eq.${id}&select=*,profiles(username,avatar_url)`,
+        `${SUPA_URL}/rest/v1/feed_groups?id=eq.${id}&select=*`,
         { headers: h }
     )
     const data = await res.json()
-    const group = Array.isArray(data) ? data[0] : null
+    const group = Array.isArray(data) && data[0]?.id ? data[0] : null
     if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(group)
 }

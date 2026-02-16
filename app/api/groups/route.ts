@@ -6,7 +6,7 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 
 export async function GET() {
     const res = await fetch(
-        `${SUPA_URL}/rest/v1/feed_groups?order=member_count.desc&select=*,profiles(username,avatar_url)`,
+        `${SUPA_URL}/rest/v1/feed_groups?order=member_count.desc&select=*`,
         { headers: h }
     )
     const data = await res.json()
