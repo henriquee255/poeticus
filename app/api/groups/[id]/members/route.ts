@@ -6,16 +6,31 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
+    // Fetch members without FK join (user_id → auth.users, not profiles)
     const res = await fetch(
-        `${SUPA_URL}/rest/v1/feed_group_members?group_id=eq.${id}&select=*,profiles(id,username,avatar_url,bio)`,
+        `${SUPA_URL}/rest/v1/feed_group_members?group_id=eq.${id}&select=*`,
         { headers: h }
     )
     const data = await res.json()
-    if (!Array.isArray(data)) return NextResponse.json([])
-    // Sort: creator first, then moderators, then members (resilient to missing role)
+    if (!Array.isArray(data) || data.length === 0) return NextResponse.json([])
+
+    // Batch-fetch profiles separately
+    const userIds = data.map((m: any) => m.user_id).filter(Boolean)
+    const profilesRes = await fetch(
+        `${SUPA_URL}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,username,avatar_url`,
+        { headers: h }
+    )
+    const profiles = await profilesRes.json()
+    const profileMap: Record<string, any> = {}
+    if (Array.isArray(profiles)) {
+        profiles.forEach((p: any) => { profileMap[p.id] = p })
+    }
+
+    const merged = data.map((m: any) => ({ ...m, profiles: profileMap[m.user_id] || null }))
+    // Sort: creator first, then moderators, then members
     const order = (r: string) => r === 'creator' ? 0 : r === 'moderator' ? 1 : 2
-    data.sort((a: any, b: any) => order(a.role || 'member') - order(b.role || 'member'))
-    return NextResponse.json(data)
+    merged.sort((a: any, b: any) => order(a.role || 'member') - order(b.role || 'member'))
+    return NextResponse.json(merged)
 }
 
 // PATCH: change member role (admin_id must be creator or moderator with enough privilege)

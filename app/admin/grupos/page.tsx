@@ -56,7 +56,6 @@ export default function AdminGruposPage() {
     }, [])
 
     const loadMembers = async (groupId: string) => {
-        if (membersByGroup[groupId]) return
         setMemberLoadingFor(groupId)
         const res = await fetch(`/api/groups/${groupId}/members`)
         const data = await res.json()
