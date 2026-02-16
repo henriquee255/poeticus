@@ -187,6 +187,7 @@ export default function GroupPage() {
     const [isMember, setIsMember] = useState(false)
     const [isRequested, setIsRequested] = useState(false)
     const [members, setMembers] = useState<Member[]>([])
+    const [membersLoaded, setMembersLoaded] = useState(false)
     const [requests, setRequests] = useState<JoinRequest[]>([])
     const [posts, setPosts] = useState<FeedPost[]>([])
     const [loadingFeed, setLoadingFeed] = useState(true)
@@ -233,13 +234,13 @@ export default function GroupPage() {
         fetch(`/api/groups/${id}/members`).then(r => r.json()).then(data => {
             if (Array.isArray(data)) {
                 setMembers(data)
+                setMembersLoaded(true)
                 const me = data.find((m: Member) => m.user_id === user.id)
                 if (me) {
                     setIsMember(true)
                     setMyRole(me.role)
                     localStorage.setItem(`group_member_${id}_${user.id}`, 'true')
                 } else {
-                    // Check if requested
                     const requested = localStorage.getItem(`group_requested_${id}_${user.id}`) === 'true'
                     setIsRequested(requested)
                 }
@@ -258,9 +259,9 @@ export default function GroupPage() {
     }, [group, id])
 
     useEffect(() => {
-        if (tab === 'members' && members.length === 0) {
+        if (tab === 'members' && !membersLoaded) {
             fetch(`/api/groups/${id}/members`).then(r => r.json()).then(data => {
-                if (Array.isArray(data)) setMembers(data)
+                if (Array.isArray(data)) { setMembers(data); setMembersLoaded(true) }
             })
         }
         if (tab === 'settings' && (myRole === 'creator' || myRole === 'moderator')) {
@@ -566,10 +567,16 @@ export default function GroupPage() {
                 {/* TAB: MEMBERS */}
                 {tab === 'members' && (
                     <div className="space-y-2 pb-16">
-                        {members.length === 0 && (
+                        {!membersLoaded && (
+                            <div className="text-center py-16 text-gray-600">
+                                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                                <p className="text-sm">Carregando membros...</p>
+                            </div>
+                        )}
+                        {membersLoaded && members.length === 0 && (
                             <div className="text-center py-16 text-gray-600">
                                 <Users className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                <p className="text-sm">Carregando membros...</p>
+                                <p className="text-sm">Nenhum membro ainda.</p>
                             </div>
                         )}
                         {members.map(m => (

@@ -7,11 +7,15 @@ const h = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const res = await fetch(
-        `${SUPA_URL}/rest/v1/feed_group_members?group_id=eq.${id}&select=*,profiles(id,username,avatar_url,bio)&order=role.asc`,
+        `${SUPA_URL}/rest/v1/feed_group_members?group_id=eq.${id}&select=*,profiles(id,username,avatar_url,bio)`,
         { headers: h }
     )
     const data = await res.json()
-    return NextResponse.json(Array.isArray(data) ? data : [])
+    if (!Array.isArray(data)) return NextResponse.json([])
+    // Sort: creator first, then moderators, then members (resilient to missing role)
+    const order = (r: string) => r === 'creator' ? 0 : r === 'moderator' ? 1 : 2
+    data.sort((a: any, b: any) => order(a.role || 'member') - order(b.role || 'member'))
+    return NextResponse.json(data)
 }
 
 // PATCH: change member role (admin_id must be creator or moderator with enough privilege)
