@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Save, Instagram, Globe, Info, User, Menu, Eye, EyeOff } from "lucide-react"
+import { Save, Instagram, Globe, Info, User, Menu, Eye, EyeOff, Plus, Trash2, GripVertical } from "lucide-react"
 import { getSettings, saveSettings } from "@/lib/storage"
 import { SiteSettings, NavLink } from "@/types"
 
@@ -20,6 +20,8 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState<SiteSettings | null>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [toast, setToast] = useState("")
+    const [newLabel, setNewLabel] = useState('')
+    const [newHref, setNewHref] = useState('')
 
     const showToast = (msg: string) => {
         setToast(msg)
@@ -167,29 +169,86 @@ export default function SettingsPage() {
 
                 {/* Navegação */}
                 <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-1">
                         <Menu className="w-5 h-5 text-purple-400" />
                         <h2 className="text-xl font-bold text-white">Navegação do Blog</h2>
                     </div>
-                    <p className="text-sm text-gray-400 mb-4">Ative ou desative os itens que aparecem no menu do blog.</p>
-                    <div className="space-y-2">
-                        {(settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : DEFAULT_NAV).map((link, i) => {
-                            const navLinks = settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : DEFAULT_NAV
-                            return (
-                                <div key={link.href} className="flex items-center gap-3 p-3 bg-black/30 rounded-xl border border-white/5">
-                                    <span className="text-sm text-white flex-1">{link.label}</span>
-                                    <span className="text-xs text-gray-600 font-mono">{link.href}</span>
-                                    <button type="button"
-                                        onClick={() => {
-                                            const updated = navLinks.map((l, idx) => idx === i ? { ...l, enabled: !l.enabled } : l)
-                                            setSettings({ ...settings, navLinks: updated })
-                                        }}
-                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border transition-all ${link.enabled ? 'bg-green-900/20 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-gray-500'}`}>
-                                        {link.enabled ? <><Eye className="w-3 h-3" /> Visível</> : <><EyeOff className="w-3 h-3" /> Oculto</>}
-                                    </button>
-                                </div>
-                            )
-                        })}
+                    <p className="text-sm text-gray-400 mb-4">Gerencie os links que aparecem no menu superior do blog.</p>
+
+                    {/* Link list */}
+                    {(() => {
+                        const navLinks = settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : DEFAULT_NAV
+                        return (
+                            <div className="space-y-2 mb-4">
+                                {navLinks.map((link, i) => (
+                                    <div key={i} className="flex items-center gap-2 p-2.5 bg-black/30 rounded-xl border border-white/5">
+                                        <GripVertical className="w-4 h-4 text-gray-700 shrink-0" />
+                                        <input
+                                            value={link.label}
+                                            onChange={e => {
+                                                const updated = navLinks.map((l, idx) => idx === i ? { ...l, label: e.target.value } : l)
+                                                setSettings({ ...settings, navLinks: updated })
+                                            }}
+                                            className="bg-transparent text-sm text-white w-28 focus:outline-none focus:border-b focus:border-purple-500 border-b border-transparent"
+                                            placeholder="Label"
+                                        />
+                                        <input
+                                            value={link.href}
+                                            onChange={e => {
+                                                const updated = navLinks.map((l, idx) => idx === i ? { ...l, href: e.target.value } : l)
+                                                setSettings({ ...settings, navLinks: updated })
+                                            }}
+                                            className="bg-transparent text-xs text-gray-500 font-mono flex-1 focus:outline-none focus:border-b focus:border-purple-500 border-b border-transparent min-w-0"
+                                            placeholder="/caminho"
+                                        />
+                                        <button type="button"
+                                            onClick={() => {
+                                                const updated = navLinks.map((l, idx) => idx === i ? { ...l, enabled: !l.enabled } : l)
+                                                setSettings({ ...settings, navLinks: updated })
+                                            }}
+                                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs border transition-all shrink-0 ${link.enabled ? 'bg-green-900/20 border-green-500/20 text-green-400' : 'bg-white/5 border-white/10 text-gray-500'}`}>
+                                            {link.enabled ? <><Eye className="w-3 h-3" /> Visível</> : <><EyeOff className="w-3 h-3" /> Oculto</>}
+                                        </button>
+                                        <button type="button"
+                                            onClick={() => {
+                                                const updated = navLinks.filter((_, idx) => idx !== i)
+                                                setSettings({ ...settings, navLinks: updated })
+                                            }}
+                                            className="p-1.5 text-gray-600 hover:text-red-400 transition-colors rounded-lg hover:bg-red-900/10 shrink-0">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    })()}
+
+                    {/* Add new link */}
+                    <div className="flex gap-2 mt-2">
+                        <input
+                            value={newLabel}
+                            onChange={e => setNewLabel(e.target.value)}
+                            placeholder="Nome (ex: Poemas)"
+                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
+                        />
+                        <input
+                            value={newHref}
+                            onChange={e => setNewHref(e.target.value)}
+                            placeholder="/caminho"
+                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
+                        />
+                        <button type="button"
+                            disabled={!newLabel.trim() || !newHref.trim()}
+                            onClick={() => {
+                                if (!newLabel.trim() || !newHref.trim()) return
+                                const navLinks = settings.navLinks && settings.navLinks.length > 0 ? settings.navLinks : DEFAULT_NAV
+                                const newLink: NavLink = { label: newLabel.trim(), href: newHref.trim().startsWith('/') ? newHref.trim() : '/' + newHref.trim(), enabled: true }
+                                setSettings({ ...settings, navLinks: [...navLinks, newLink] })
+                                setNewLabel(''); setNewHref('')
+                            }}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm rounded-xl transition-colors shrink-0">
+                            <Plus className="w-4 h-4" /> Adicionar
+                        </button>
                     </div>
                     {(!settings.navLinks || settings.navLinks.length === 0) && (
                         <button type="button" onClick={() => setSettings({ ...settings, navLinks: DEFAULT_NAV })}

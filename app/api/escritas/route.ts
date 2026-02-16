@@ -51,7 +51,9 @@ export async function POST(request: Request) {
             body: JSON.stringify(body)
         })
         const data = await res.json()
-        return NextResponse.json(data[0] || {})
+        if (!Array.isArray(data)) return NextResponse.json({ error: data?.message || 'Erro ao publicar' }, { status: 400 })
+        if (!data[0]?.id) return NextResponse.json({ error: 'Não foi possível publicar. Verifique as permissões da tabela no Supabase (RLS).' }, { status: 400 })
+        return NextResponse.json(data[0])
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })
     }
