@@ -8,8 +8,11 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const user_id = searchParams.get('user_id')
-        let query = `${SUPA_URL}/rest/v1/feed_posts?order=created_at.desc&select=*,profiles(username,avatar_url)`
+        const group_id = searchParams.get('group_id')
+        let query = `${SUPA_URL}/rest/v1/feed_posts?order=created_at.desc&select=*,profiles(username,avatar_url),feed_groups(name)`
         if (user_id) query += `&user_id=eq.${user_id}`
+        if (group_id) query += `&group_id=eq.${group_id}`
+        else if (searchParams.get('global') === '1') query += `&group_id=is.null`
         const res = await fetch(query, { headers: h })
         const data = await res.json()
         return NextResponse.json(Array.isArray(data) ? data : [])
@@ -20,13 +23,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { user_id, content, image_url } = await request.json()
+        const { user_id, content, image_url, group_id } = await request.json()
         if (!user_id || !content?.trim()) {
             return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
         }
 
         const body: any = { user_id, content: content.trim() }
         if (image_url) body.image_url = image_url
+        if (group_id) body.group_id = group_id
 
         const res = await fetch(`${SUPA_URL}/rest/v1/feed_posts`, {
             method: 'POST',

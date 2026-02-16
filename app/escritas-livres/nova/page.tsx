@@ -7,7 +7,7 @@ import { motion } from "framer-motion"
 import { PenLine, Send, CheckCircle, Bold, Italic, Underline, Smile, Image as ImageIcon, X, Type } from "lucide-react"
 import Link from "next/link"
 
-const CATEGORIES = ['geral', 'amor', 'reflexão', 'saudade', 'natureza', 'outro']
+const DEFAULT_CATEGORIES = ['geral', 'amor', 'reflexão', 'saudade', 'natureza', 'cristã', 'outro']
 const EMOJIS = ['😊','😂','❤️','🔥','😍','🥺','😭','✨','😎','🤔','💜','🌸','🌙','⭐','💫','🎉','👏','🙏','💪','😢','😅','🤣','😌','💕','🌹','🦋','🌊','☀️','🌈','💭','📖','🖤','😴','🥰','💔','😤','🤯','🫶','💖','🌺','✍️','🎶','🌿','🍃','💧','🪐','🌌','🦄','🐾','🫠']
 const FONTS = [
     { label: 'Padrão', value: 'font-sans' },
@@ -38,6 +38,7 @@ export default function NovaEscritaPage() {
     const router = useRouter()
     const [title, setTitle] = useState('')
     const [content, setContent] = useState('')
+    const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
     const [category, setCategory] = useState('geral')
     const [font, setFont] = useState('font-sans')
     const [saving, setSaving] = useState(false)
@@ -53,6 +54,17 @@ export default function NovaEscritaPage() {
     useEffect(() => {
         if (!loading && !user) router.push('/login')
     }, [user, loading])
+
+    useEffect(() => {
+        fetch('/api/categories').then(r => r.json()).then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+                const cats = data.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean)
+                // Merge with defaults, keep unique
+                const merged = [...new Set([...cats, ...DEFAULT_CATEGORIES])]
+                setCategories(merged)
+            }
+        }).catch(() => {})
+    }, [])
 
     const insertFormat = (tag: string) => {
         const ta = textareaRef.current; if (!ta) return
@@ -144,7 +156,7 @@ export default function NovaEscritaPage() {
                                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Categoria</label>
                                     <select value={category} onChange={e => setCategory(e.target.value)}
                                         className="bg-black border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 transition-colors capitalize">
-                                        {CATEGORIES.map(c => <option key={c} value={c} className="bg-black capitalize">{c}</option>)}
+                                        {categories.map(c => <option key={c} value={c} className="bg-black capitalize">{c}</option>)}
                                     </select>
                                 </div>
                                 <div>

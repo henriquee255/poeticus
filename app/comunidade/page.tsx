@@ -3,14 +3,18 @@
 import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, Trash2, Send, User, ChevronDown, ChevronUp, Image as ImageIcon, Smile, X } from "lucide-react"
+import {
+    Heart, MessageCircle, Trash2, Send, User, ChevronDown, ChevronUp,
+    Image as ImageIcon, Smile, X, Users, Plus, Hash, Globe, Search,
+    ChevronRight, Sparkles
+} from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 const EMOJIS = ['😊','😂','❤️','🔥','😍','🥺','😭','✨','😎','🤔','💜','🌸','🌙','⭐','💫','🎉','👏','🙏','💪','😢','😅','🤣','😌','💕','🌹','🦋','🌊','☀️','🌈','💭','📖','🖤','😴','🥰','💔','😤','🤯','🫶','💖','🌺','✍️','🎶','🌿','🍃','💧','🪐','🌌','🦄','🐾','🫠']
 
-function EmojiPicker({ onPick, onClose }: { onPick: (e: string) => void; onClose: () => void }) {
+function EmojiPicker({ onPick, onClose, up }: { onPick: (e: string) => void; onClose: () => void; up?: boolean }) {
     const ref = useRef<HTMLDivElement>(null)
     useEffect(() => {
         const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
@@ -18,7 +22,7 @@ function EmojiPicker({ onPick, onClose }: { onPick: (e: string) => void; onClose
         return () => document.removeEventListener('mousedown', handler)
     }, [])
     return (
-        <div ref={ref} className="absolute bottom-12 left-0 z-50 bg-zinc-900 border border-white/10 rounded-2xl p-3 shadow-xl w-64">
+        <div ref={ref} className={`absolute ${up ? 'bottom-10' : 'top-10'} left-0 z-50 bg-zinc-900 border border-white/10 rounded-2xl p-3 shadow-xl w-64`}>
             <div className="grid grid-cols-8 gap-1">
                 {EMOJIS.map(e => (
                     <button key={e} onClick={() => onPick(e)} className="text-lg hover:bg-white/10 rounded-lg p-1 transition-colors">{e}</button>
@@ -26,6 +30,15 @@ function EmojiPicker({ onPick, onClose }: { onPick: (e: string) => void; onClose
             </div>
         </div>
     )
+}
+
+interface Group {
+    id: string
+    name: string
+    description?: string
+    member_count: number
+    creator_id: string
+    created_at: string
 }
 
 interface Reply {
@@ -43,7 +56,18 @@ interface FeedPost {
     likes: number
     created_at: string
     user_id: string
+    group_id?: string
     profiles: { username: string; avatar_url?: string }
+    feed_groups?: { name: string }
+}
+
+function Avatar({ url, size = 10 }: { url?: string; size?: number }) {
+    const s = `w-${size} h-${size}`
+    return (
+        <div className={`${s} rounded-full bg-purple-900/40 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0`}>
+            {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-purple-400" />}
+        </div>
+    )
 }
 
 function PostCard({ post, currentUserId, currentProfile, onDelete }: {
@@ -103,20 +127,25 @@ function PostCard({ post, currentUserId, currentProfile, onDelete }: {
 
     return (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-zinc-900/80 border border-white/[0.08] rounded-2xl overflow-hidden hover:border-white/15 transition-colors">
+            className="bg-zinc-900/80 border border-white/[0.07] rounded-2xl overflow-hidden hover:border-white/15 transition-all">
             <div className="p-4 sm:p-5">
                 <div className="flex gap-3">
-                    <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0">
-                        {post.profiles?.avatar_url ? <img src={post.profiles.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-purple-400" />}
-                    </div>
+                    <Avatar url={post.profiles?.avatar_url} size={10} />
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-semibold text-white">@{post.profiles?.username || 'anônimo'}</span>
-                                <span className="text-xs text-gray-600">{format(new Date(post.created_at), 'dd MMM yyyy, HH:mm', { locale: ptBR })}</span>
+                        <div className="flex items-start justify-between mb-1.5">
+                            <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-semibold text-white">@{post.profiles?.username || 'anônimo'}</span>
+                                    {post.feed_groups?.name && (
+                                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-purple-900/30 border border-purple-500/20 text-purple-300 rounded-full">
+                                            <Hash className="w-2.5 h-2.5" />{post.feed_groups.name}
+                                        </span>
+                                    )}
+                                </div>
+                                <span className="text-[11px] text-gray-600">{format(new Date(post.created_at), 'dd MMM yyyy, HH:mm', { locale: ptBR })}</span>
                             </div>
                             {currentUserId === post.user_id && (
-                                <button onClick={() => onDelete(post.id)} className="text-gray-600 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-900/10">
+                                <button onClick={() => onDelete(post.id)} className="text-gray-700 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-900/10 mt-0.5">
                                     <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             )}
@@ -172,7 +201,7 @@ function PostCard({ post, currentUserId, currentProfile, onDelete }: {
                                         <button type="button" onClick={() => setShowEmojiReply(p => !p)} className="h-full px-2 text-gray-500 hover:text-yellow-400 transition-colors">
                                             <Smile className="w-3.5 h-3.5" />
                                         </button>
-                                        {showEmojiReply && <EmojiPicker onPick={e => { setReplyText(p => p + e); setShowEmojiReply(false) }} onClose={() => setShowEmojiReply(false)} />}
+                                        {showEmojiReply && <EmojiPicker onPick={e => { setReplyText(p => p + e); setShowEmojiReply(false) }} onClose={() => setShowEmojiReply(false)} up />}
                                     </div>
                                     <button type="submit" disabled={!replyText.trim()} className="bg-purple-600 hover:bg-purple-700 disabled:opacity-30 text-white px-3 py-2 rounded-xl transition-colors"><Send className="w-3 h-3" /></button>
                                 </form>
@@ -182,6 +211,32 @@ function PostCard({ post, currentUserId, currentProfile, onDelete }: {
                 )}
             </AnimatePresence>
         </motion.div>
+    )
+}
+
+function GroupCard({ group, isMember, onToggle, userId }: {
+    group: Group; isMember: boolean; onToggle: (id: string, currentMember: boolean) => void; userId?: string
+}) {
+    return (
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group cursor-pointer">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-900/60 to-indigo-900/60 border border-purple-500/20 flex items-center justify-center shrink-0">
+                <Hash className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-200 truncate">{group.name}</p>
+                <p className="text-[11px] text-gray-600">{group.member_count} {group.member_count === 1 ? 'membro' : 'membros'}</p>
+            </div>
+            {userId && (
+                <button
+                    onClick={() => onToggle(group.id, isMember)}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all shrink-0 ${isMember
+                        ? 'bg-purple-900/30 border-purple-500/30 text-purple-300 hover:bg-red-900/20 hover:border-red-500/20 hover:text-red-400'
+                        : 'border-white/10 text-gray-500 hover:border-purple-500/30 hover:text-purple-300'
+                    }`}>
+                    {isMember ? 'Sair' : 'Entrar'}
+                </button>
+            )}
+        </div>
     )
 }
 
@@ -198,9 +253,89 @@ export default function ComunidadePage() {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    useEffect(() => {
-        fetch('/api/feed').then(r => r.json()).then(data => { setPosts(Array.isArray(data) ? data : []); setLoading(false) })
-    }, [])
+    // Groups
+    const [groups, setGroups] = useState<Group[]>([])
+    const [activeGroup, setActiveGroup] = useState<Group | null>(null)
+    const [memberOf, setMemberOf] = useState<Set<string>>(new Set())
+    const [groupSearch, setGroupSearch] = useState('')
+    const [showCreateGroup, setShowCreateGroup] = useState(false)
+    const [newGroupName, setNewGroupName] = useState('')
+    const [newGroupDesc, setNewGroupDesc] = useState('')
+    const [creatingGroup, setCreatingGroup] = useState(false)
+    const [postInGroup, setPostInGroup] = useState(false)
+
+    const loadFeed = (groupId?: string | null) => {
+        setLoading(true)
+        const url = groupId ? `/api/feed?group_id=${groupId}` : '/api/feed'
+        fetch(url).then(r => r.json()).then(data => {
+            setPosts(Array.isArray(data) ? data : [])
+            setLoading(false)
+        })
+    }
+
+    const loadGroups = () => {
+        fetch('/api/groups').then(r => r.json()).then(data => {
+            if (Array.isArray(data)) {
+                setGroups(data)
+                if (user) {
+                    const joined = new Set<string>(
+                        data.filter((g: Group) => {
+                            const stored = typeof window !== 'undefined'
+                                ? localStorage.getItem(`group_member_${g.id}_${user.id}`)
+                                : null
+                            return stored === 'true'
+                        }).map((g: Group) => g.id)
+                    )
+                    setMemberOf(joined)
+                }
+            }
+        })
+    }
+
+    useEffect(() => { loadFeed(); loadGroups() }, [])
+
+    const handleSelectGroup = (g: Group | null) => {
+        setActiveGroup(g)
+        loadFeed(g?.id)
+        if (g) setPostInGroup(true)
+        else setPostInGroup(false)
+    }
+
+    const handleToggleMember = async (groupId: string, isMember: boolean) => {
+        if (!user) return
+        const res = await fetch(`/api/groups/${groupId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id })
+        })
+        const data = await res.json()
+        if (data.member !== undefined) {
+            const next = new Set(memberOf)
+            if (data.member) next.add(groupId); else next.delete(groupId)
+            setMemberOf(next)
+            localStorage.setItem(`group_member_${groupId}_${user.id}`, data.member ? 'true' : 'false')
+            setGroups(prev => prev.map(g => g.id === groupId ? { ...g, member_count: data.member_count } : g))
+        }
+    }
+
+    const handleCreateGroup = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newGroupName.trim() || !user) return
+        setCreatingGroup(true)
+        const res = await fetch('/api/groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newGroupName.trim(), description: newGroupDesc.trim(), creator_id: user.id })
+        })
+        const data = await res.json()
+        if (data.id) {
+            setGroups(prev => [data, ...prev])
+            const next = new Set(memberOf); next.add(data.id); setMemberOf(next)
+            localStorage.setItem(`group_member_${data.id}_${user.id}`, 'true')
+            setNewGroupName(''); setNewGroupDesc(''); setShowCreateGroup(false)
+        }
+        setCreatingGroup(false)
+    }
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return
@@ -224,13 +359,20 @@ export default function ComunidadePage() {
             if (uploadData.url) image_url = uploadData.url
             setUploadingImg(false)
         }
+        const body: any = { user_id: user.id, content: text.trim() }
+        if (image_url) body.image_url = image_url
+        if (postInGroup && activeGroup) body.group_id = activeGroup.id
         const res = await fetch('/api/feed', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: user.id, content: text.trim(), image_url: image_url || undefined })
+            body: JSON.stringify(body)
         })
         const data = await res.json()
         if (data.id) {
-            setPosts(prev => [{ ...data, profiles: { username: profile?.username || 'você', avatar_url: profile?.avatar_url } }, ...prev])
+            setPosts(prev => [{
+                ...data,
+                profiles: { username: profile?.username || 'você', avatar_url: profile?.avatar_url },
+                feed_groups: postInGroup && activeGroup ? { name: activeGroup.name } : undefined
+            }, ...prev])
             setText(''); setImageFile(null); setImagePreview('')
         }
         setPosting(false)
@@ -241,89 +383,291 @@ export default function ComunidadePage() {
         setPosts(prev => prev.filter(p => p.id !== id))
     }
 
+    const filteredGroups = groups.filter(g =>
+        groupSearch ? g.name.toLowerCase().includes(groupSearch.toLowerCase()) : true
+    )
+
     return (
         <div className="min-h-screen bg-black">
-            <div className="max-w-2xl mx-auto px-4 py-16">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-white font-serif mb-2">Comunidade</h1>
-                    <p className="text-gray-500 text-sm">Compartilhe pensamentos, poesias e reflexões.</p>
+            {/* Mobile groups strip */}
+            <div className="lg:hidden border-b border-white/5 bg-zinc-950/80 sticky top-0 z-30 backdrop-blur-md">
+                <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => handleSelectGroup(null)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${!activeGroup ? 'bg-purple-600 border-purple-500 text-white' : 'border-white/10 text-gray-400 hover:border-white/20'}`}>
+                        <Globe className="w-3.5 h-3.5" /> Feed global
+                    </button>
+                    {groups.map(g => (
+                        <button key={g.id}
+                            onClick={() => handleSelectGroup(g)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${activeGroup?.id === g.id ? 'bg-purple-600 border-purple-500 text-white' : 'border-white/10 text-gray-400 hover:border-white/20'}`}>
+                            <Hash className="w-3 h-3" />{g.name}
+                        </button>
+                    ))}
+                    {user && (
+                        <button
+                            onClick={() => setShowCreateGroup(p => !p)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 border border-dashed border-white/20 text-gray-500 hover:border-purple-500/40 hover:text-purple-400 transition-all">
+                            <Plus className="w-3 h-3" /> Criar grupo
+                        </button>
+                    )}
                 </div>
-
-                {user ? (
-                    <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-5 mb-6">
-                        <div className="flex gap-3">
-                            <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-500/30 overflow-hidden flex items-center justify-center shrink-0">
-                                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-purple-400" />}
-                            </div>
-                            <div className="flex-1">
-                                <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
-                                    placeholder="O que você está pensando?"
-                                    className="w-full bg-transparent text-white placeholder:text-gray-600 text-sm leading-relaxed focus:outline-none resize-none"
-                                    rows={3} maxLength={500} />
-                                {imagePreview && (
-                                    <div className="relative mt-2 rounded-xl overflow-hidden border border-white/10 w-fit">
-                                        <img src={imagePreview} alt="" className="max-h-48 object-cover rounded-xl" />
-                                        <button onClick={() => { setImageFile(null); setImagePreview('') }}
-                                            className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors">
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                )}
-                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                                    <div className="flex items-center gap-1 relative">
-                                        <button type="button" onClick={() => fileInputRef.current?.click()}
-                                            className="p-2 text-gray-500 hover:text-purple-400 hover:bg-purple-900/20 rounded-lg transition-colors" title="Adicionar foto">
-                                            <ImageIcon className="w-4 h-4" />
-                                        </button>
-                                        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                                        <div className="relative">
-                                            <button type="button" onClick={() => setShowEmoji(p => !p)}
-                                                className="p-2 text-gray-500 hover:text-yellow-400 hover:bg-yellow-900/20 rounded-lg transition-colors" title="Emojis">
-                                                <Smile className="w-4 h-4" />
-                                            </button>
-                                            {showEmoji && <EmojiPicker onPick={e => { setText(p => p + e); setShowEmoji(false); textareaRef.current?.focus() }} onClose={() => setShowEmoji(false)} />}
-                                        </div>
-                                        <span className="text-xs text-gray-700 ml-2">{text.length}/500</span>
-                                    </div>
-                                    <button onClick={handlePost} disabled={!text.trim() || posting || uploadingImg}
-                                        className="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-30 text-white text-sm font-medium rounded-xl transition-colors">
-                                        <Send className="w-3.5 h-3.5" />
-                                        {uploadingImg ? 'Enviando...' : posting ? 'Publicando...' : 'Publicar'}
+                {/* Mobile create group */}
+                <AnimatePresence>
+                    {showCreateGroup && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                            className="border-t border-white/5 overflow-hidden">
+                            <form onSubmit={handleCreateGroup} className="p-4 space-y-2">
+                                <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
+                                    placeholder="Nome do grupo" maxLength={40}
+                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
+                                <input value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)}
+                                    placeholder="Descrição (opcional)" maxLength={100}
+                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
+                                <div className="flex gap-2">
+                                    <button type="submit" disabled={!newGroupName.trim() || creatingGroup}
+                                        className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm rounded-xl transition-colors">
+                                        {creatingGroup ? 'Criando...' : 'Criar grupo'}
+                                    </button>
+                                    <button type="button" onClick={() => setShowCreateGroup(false)}
+                                        className="px-4 py-2 border border-white/10 text-gray-400 text-sm rounded-xl hover:text-white transition-colors">
+                                        Cancelar
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 mb-6 text-center">
-                        <p className="text-gray-400 text-sm mb-4">Participe da comunidade</p>
-                        <div className="flex gap-3 justify-center">
-                            <Link href="/login" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-xl transition-colors">Entrar</Link>
-                            <Link href="/cadastro" className="px-5 py-2 bg-white/5 border border-white/10 hover:border-white/20 text-gray-300 text-sm rounded-xl transition-colors">Criar conta</Link>
-                        </div>
-                    </div>
-                )}
+                            </form>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
 
-                {loading && (
-                    <div className="space-y-4">
-                        {[1,2,3].map(i => (
-                            <div key={i} className="bg-zinc-900/50 border border-white/5 rounded-2xl p-5 animate-pulse">
-                                <div className="flex gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-white/5" />
-                                    <div className="flex-1 space-y-2"><div className="h-3 bg-white/5 rounded w-32" /><div className="h-3 bg-white/5 rounded w-full" /><div className="h-3 bg-white/5 rounded w-3/4" /></div>
+            <div className="max-w-6xl mx-auto px-4 py-8 lg:py-12">
+                <div className="flex gap-8">
+                    {/* Left sidebar — desktop */}
+                    <aside className="hidden lg:flex flex-col w-72 shrink-0">
+                        <div className="sticky top-8 space-y-4">
+                            {/* Header */}
+                            <div>
+                                <h1 className="text-2xl font-bold text-white font-serif mb-1">Comunidade</h1>
+                                <p className="text-gray-600 text-sm">Compartilhe pensamentos e reflexões</p>
+                            </div>
+
+                            {/* Feed global button */}
+                            <button
+                                onClick={() => handleSelectGroup(null)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${!activeGroup ? 'bg-purple-600/20 border-purple-500/30 text-purple-300' : 'border-white/5 text-gray-400 hover:border-white/10 hover:text-white'}`}>
+                                <Globe className="w-4 h-4 shrink-0" />
+                                <span className="text-sm font-medium">Feed global</span>
+                            </button>
+
+                            {/* Groups section */}
+                            <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl overflow-hidden">
+                                <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-purple-400" />
+                                        <span className="text-sm font-semibold text-white">Grupos</span>
+                                    </div>
+                                    {user && (
+                                        <button onClick={() => setShowCreateGroup(p => !p)}
+                                            className="w-6 h-6 flex items-center justify-center rounded-lg bg-white/5 hover:bg-purple-900/30 text-gray-400 hover:text-purple-300 transition-all">
+                                            <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Create group form */}
+                                <AnimatePresence>
+                                    {showCreateGroup && (
+                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                            className="border-b border-white/5 overflow-hidden">
+                                            <form onSubmit={handleCreateGroup} className="p-4 space-y-2">
+                                                <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
+                                                    placeholder="Nome do grupo" maxLength={40}
+                                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
+                                                <input value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)}
+                                                    placeholder="Descrição (opcional)" maxLength={100}
+                                                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-600" />
+                                                <div className="flex gap-2">
+                                                    <button type="submit" disabled={!newGroupName.trim() || creatingGroup}
+                                                        className="flex-1 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs rounded-lg transition-colors">
+                                                        {creatingGroup ? 'Criando...' : 'Criar'}
+                                                    </button>
+                                                    <button type="button" onClick={() => setShowCreateGroup(false)}
+                                                        className="px-3 py-1.5 border border-white/10 text-gray-500 text-xs rounded-lg hover:text-white transition-colors">
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Search */}
+                                <div className="px-3 pt-3 pb-1">
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+                                        <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)}
+                                            placeholder="Buscar grupos..."
+                                            className="w-full bg-white/[0.03] border border-white/[0.07] rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 placeholder:text-gray-700" />
+                                    </div>
+                                </div>
+
+                                {/* Group list */}
+                                <div className="p-2 max-h-80 overflow-y-auto">
+                                    {filteredGroups.length === 0 && (
+                                        <p className="text-xs text-gray-600 text-center py-4">Nenhum grupo ainda</p>
+                                    )}
+                                    {filteredGroups.map(g => (
+                                        <div key={g.id} onClick={() => handleSelectGroup(g)}
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer ${activeGroup?.id === g.id ? 'bg-purple-900/20' : ''}`}>
+                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-900/60 to-indigo-900/60 border border-purple-500/20 flex items-center justify-center shrink-0">
+                                                <Hash className="w-4 h-4 text-purple-400" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-200 truncate">{g.name}</p>
+                                                <p className="text-[11px] text-gray-600">{g.member_count} {g.member_count === 1 ? 'membro' : 'membros'}</p>
+                                            </div>
+                                            {user && (
+                                                <button
+                                                    onClick={ev => { ev.stopPropagation(); handleToggleMember(g.id, memberOf.has(g.id)) }}
+                                                    className={`text-[10px] px-2 py-1 rounded-lg border transition-all shrink-0 ${memberOf.has(g.id)
+                                                        ? 'bg-purple-900/30 border-purple-500/30 text-purple-300 hover:bg-red-900/20 hover:border-red-500/20 hover:text-red-400'
+                                                        : 'border-white/10 text-gray-600 hover:border-purple-500/30 hover:text-purple-300'
+                                                    }`}>
+                                                    {memberOf.has(g.id) ? 'Sair' : 'Entrar'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-                {!loading && posts.length === 0 && (
-                    <div className="text-center py-20 text-gray-600">
-                        <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                        <p className="text-sm">Nenhuma publicação ainda. Seja o primeiro!</p>
-                    </div>
-                )}
-                <div className="space-y-3">
-                    {posts.map(p => <PostCard key={p.id} post={p} currentUserId={user?.id} currentProfile={profile} onDelete={handleDelete} />)}
+
+                            {/* Invite / info card */}
+                            <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/10 rounded-2xl p-4">
+                                <Sparkles className="w-5 h-5 text-purple-400 mb-2" />
+                                <p className="text-sm font-medium text-white mb-1">Novo por aqui?</p>
+                                <p className="text-xs text-gray-500 mb-3">Entre em grupos para encontrar pessoas com os mesmos interesses.</p>
+                                {!user && (
+                                    <Link href="/cadastro" className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                                        Criar conta grátis <ChevronRight className="w-3 h-3" />
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Main feed */}
+                    <main className="flex-1 min-w-0 space-y-4">
+                        {/* Active group banner */}
+                        <AnimatePresence>
+                            {activeGroup && (
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                                    className="bg-purple-900/20 border border-purple-500/20 rounded-2xl px-5 py-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/30 to-indigo-600/30 border border-purple-500/30 flex items-center justify-center">
+                                            <Hash className="w-5 h-5 text-purple-300" />
+                                        </div>
+                                        <div>
+                                            <h2 className="font-bold text-white text-lg leading-none">{activeGroup.name}</h2>
+                                            {activeGroup.description && <p className="text-xs text-purple-300/70 mt-0.5">{activeGroup.description}</p>}
+                                            <p className="text-xs text-purple-400/60 mt-0.5">{activeGroup.member_count} membros</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => handleSelectGroup(null)} className="text-purple-400/60 hover:text-purple-300 transition-colors p-1">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Composer */}
+                        {user ? (
+                            <div className="bg-zinc-900/80 border border-white/[0.07] rounded-2xl p-5">
+                                <div className="flex gap-3">
+                                    <Avatar url={profile?.avatar_url} size={10} />
+                                    <div className="flex-1">
+                                        <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
+                                            placeholder={activeGroup && postInGroup ? `Publicar em #${activeGroup.name}...` : 'O que você está pensando?'}
+                                            className="w-full bg-transparent text-white placeholder:text-gray-600 text-sm leading-relaxed focus:outline-none resize-none"
+                                            rows={3} maxLength={500} />
+                                        {imagePreview && (
+                                            <div className="relative mt-2 rounded-xl overflow-hidden border border-white/10 w-fit">
+                                                <img src={imagePreview} alt="" className="max-h-48 object-cover rounded-xl" />
+                                                <button onClick={() => { setImageFile(null); setImagePreview('') }}
+                                                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors">
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5 flex-wrap gap-2">
+                                            <div className="flex items-center gap-1 relative">
+                                                <button type="button" onClick={() => fileInputRef.current?.click()}
+                                                    className="p-2 text-gray-500 hover:text-purple-400 hover:bg-purple-900/20 rounded-lg transition-colors" title="Adicionar foto">
+                                                    <ImageIcon className="w-4 h-4" />
+                                                </button>
+                                                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                                                <div className="relative">
+                                                    <button type="button" onClick={() => setShowEmoji(p => !p)}
+                                                        className="p-2 text-gray-500 hover:text-yellow-400 hover:bg-yellow-900/20 rounded-lg transition-colors" title="Emojis">
+                                                        <Smile className="w-4 h-4" />
+                                                    </button>
+                                                    {showEmoji && <EmojiPicker onPick={e => { setText(p => p + e); setShowEmoji(false); textareaRef.current?.focus() }} onClose={() => setShowEmoji(false)} />}
+                                                </div>
+                                                <span className="text-xs text-gray-700 ml-1">{text.length}/500</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {activeGroup && (
+                                                    <button type="button" onClick={() => setPostInGroup(p => !p)}
+                                                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${postInGroup ? 'bg-purple-900/30 border-purple-500/30 text-purple-300' : 'border-white/10 text-gray-500 hover:border-white/20'}`}>
+                                                        <Hash className="w-3 h-3" />{activeGroup.name}
+                                                    </button>
+                                                )}
+                                                <button onClick={handlePost} disabled={!text.trim() || posting || uploadingImg}
+                                                    className="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-30 text-white text-sm font-medium rounded-xl transition-colors">
+                                                    <Send className="w-3.5 h-3.5" />
+                                                    {uploadingImg ? 'Enviando...' : posting ? 'Publicando...' : 'Publicar'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-zinc-900/50 border border-white/[0.07] rounded-2xl p-6 text-center">
+                                <p className="text-gray-400 text-sm mb-4">Participe da comunidade</p>
+                                <div className="flex gap-3 justify-center">
+                                    <Link href="/login" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-xl transition-colors">Entrar</Link>
+                                    <Link href="/cadastro" className="px-5 py-2 bg-white/5 border border-white/10 hover:border-white/20 text-gray-300 text-sm rounded-xl transition-colors">Criar conta</Link>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Feed */}
+                        {loading && (
+                            <div className="space-y-3">
+                                {[1,2,3].map(i => (
+                                    <div key={i} className="bg-zinc-900/50 border border-white/5 rounded-2xl p-5 animate-pulse">
+                                        <div className="flex gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-white/5 shrink-0" />
+                                            <div className="flex-1 space-y-2">
+                                                <div className="h-3 bg-white/5 rounded w-32" />
+                                                <div className="h-3 bg-white/5 rounded w-full" />
+                                                <div className="h-3 bg-white/5 rounded w-3/4" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {!loading && posts.length === 0 && (
+                            <div className="text-center py-20 text-gray-600">
+                                <MessageCircle className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                                <p className="text-sm">{activeGroup ? `Nenhuma publicação em #${activeGroup.name} ainda.` : 'Nenhuma publicação ainda. Seja o primeiro!'}</p>
+                            </div>
+                        )}
+                        <div className="space-y-3">
+                            {posts.map(p => <PostCard key={p.id} post={p} currentUserId={user?.id} currentProfile={profile} onDelete={handleDelete} />)}
+                        </div>
+                    </main>
                 </div>
             </div>
         </div>
